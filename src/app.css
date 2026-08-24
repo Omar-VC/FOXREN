@@ -1,0 +1,20 @@
+#center {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.hero {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.counter {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #646cff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
