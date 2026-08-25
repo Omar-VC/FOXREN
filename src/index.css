@@ -1,0 +1,19 @@
+@import './styles/variables.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: var(--font-family-base);
+  background: linear-gradient(
+    180deg,
+    #1a2524 0%,        /* Oscuro profundo arriba */
+    #273736 70%,       /* Oscuro/grisáceo hasta casi toda la pantalla */
+    #4e6c6d 85%,       /* transición suave */
+    #ffffff 100%       /* Blanco recién en el último cuarto */
+  );
+  color: var(--color-light);
+  min-height: 100vh;
+}
+

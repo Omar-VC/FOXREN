@@ -1,0 +1,16 @@
+:root {
+  --color-primary: #3fa81c; /* Verde turquesa vibrante */
+  --color-dark: #1a2524; /* Verde oscuro grisáceo */
+  --color-light: #ffffff; /* Blanco puro */
+  --color-secondary: #2b3c3d; /* Verde gris medio */
+  --color-extra-dark: #121212; /* Gris muy oscuro nuevo */
+  --color-primary-light: #d4fbd4; /* Verde muy claro, casi blanco */
+
+  --overlay-dark: rgba(39, 55, 54, 0.85);
+  --overlay-light: rgba(28, 168, 147, 0.3);
+
+  --font-family-base: "Inter", "Roboto", sans-serif;
+
+  --border-radius: 12px;
+  --shadow-card: 0 0 16px rgba(142, 192, 153, 0.422); /* Glow turquesa */
+}
