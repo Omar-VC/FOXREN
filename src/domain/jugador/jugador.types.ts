@@ -1,13 +1,11 @@
 export type Sexo = "masculino" | "femenino";
 
-export type NivelInicial =
-  | "iniciado"
-  | "intermedio"
-  | "avanzado";
+export type NivelInicial = "iniciado" | "intermedio" | "avanzado";
 
 export type LadoJuego = "drive" | "reves";
 
-export type EstadoJugador = "activo" | "inactivo";
+// ahora incluye pendiente y rechazado
+export type EstadoJugador = "activo" | "inactivo" | "pendiente" | "rechazado";
 
 export interface Jugador {
   id: string;

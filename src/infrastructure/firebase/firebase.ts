@@ -1,20 +1,18 @@
+// src/infrastructure/firebase/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// Configuración de tu proyecto Firebase
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_STORAGE_BUCKET",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID",
+  apiKey: "AIzaSyATPsAPFbbbwqRkqawII9uZhLARz6l0hm8",
+  authDomain: "frp-santiago-del-estero.firebaseapp.com",
+  projectId: "frp-santiago-del-estero",
+  storageBucket: "frp-santiago-del-estero.firebasestorage.app",
+  messagingSenderId: "586728514339",
+  appId: "1:586728514339:web:4ca4e3c80e55d5403e6296"
 };
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exportar instancias
 export const db = getFirestore(app);
 export const auth = getAuth(app);
