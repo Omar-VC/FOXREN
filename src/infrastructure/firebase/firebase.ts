@@ -4,12 +4,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyATPsAPFbbbwqRkqawII9uZhLARz6l0hm8",
-  authDomain: "frp-santiago-del-estero.firebaseapp.com",
-  projectId: "frp-santiago-del-estero",
-  storageBucket: "frp-santiago-del-estero.firebasestorage.app",
-  messagingSenderId: "586728514339",
-  appId: "1:586728514339:web:4ca4e3c80e55d5403e6296"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
