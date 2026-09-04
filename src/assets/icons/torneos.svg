@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="var(--color-primary)" viewBox="0 0 24 24">
+  <rect x="4" y="4" width="16" height="16" rx="4"/>
+  <text x="12" y="16" text-anchor="middle" font-size="10" fill="var(--color-light)">T</text>
+</svg>

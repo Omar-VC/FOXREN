@@ -14,6 +14,7 @@ export const toFirestoreJugador = (jugador: Jugador) => {
     ladoJuego: jugador.ladoJuego,
     categoriaId: jugador.categoriaId,
     estado: jugador.estado ?? "activo",
+    categoriaDeclarada: jugador.categoriaDeclarada ?? "", // 👈 agregado
   };
 };
 
@@ -31,6 +32,7 @@ export const fromFirestoreJugador = (doc: any): Jugador => {
     ladoJuego: doc.ladoJuego,
     categoriaId: doc.categoriaId,
     estado: doc.estado ?? "activo",
+    categoriaDeclarada: doc.categoriaDeclarada ?? "", // 👈 corregido
   };
 };
 

@@ -21,7 +21,9 @@ export interface Jugador {
   nivelInicial: NivelInicial;
   ladoJuego: LadoJuego;
 
-  categoriaId: string;
+  categoriaId: string;          // asignada por admin
+  categoriaDeclarada: string;   // 👈 nueva: declarada por el jugador
 
   estado: EstadoJugador;
+  fechaRegistro?: Date;         // opcional si lo querés tipar
 }

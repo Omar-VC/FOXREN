@@ -13,6 +13,7 @@ export const JugadorForm: React.FC = () => {
   const [sexo, setSexo] = useState<Sexo>("masculino");
   const [nivelInicial, setNivelInicial] = useState<NivelInicial>("iniciado");
   const [ladoJuego, setLadoJuego] = useState<LadoJuego>("drive");
+  const [categoriaDeclarada, setCategoriaDeclarada] = useState("sexta"); // 👈 nuevo campo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +28,8 @@ export const JugadorForm: React.FC = () => {
         sexo,
         nivelInicial,
         ladoJuego,
-        categoriaId: "sin_categoria", // valor fijo por ahora
+        categoriaDeclarada,       // 👈 se guarda lo que declara el jugador
+        categoriaId: "sin_categoria", // admin asigna después
         estado: "pendiente" as EstadoJugador,
         fechaRegistro: Timestamp.now(),
       });
@@ -41,6 +43,7 @@ export const JugadorForm: React.FC = () => {
       setSexo("masculino");
       setNivelInicial("iniciado");
       setLadoJuego("drive");
+      setCategoriaDeclarada("sexta");
     } catch (error) {
       console.error("Error al registrar jugador:", error);
       alert("Hubo un error al registrar el jugador.");
@@ -73,6 +76,22 @@ export const JugadorForm: React.FC = () => {
       <select value={ladoJuego} onChange={(e) => setLadoJuego(e.target.value as LadoJuego)} className="w-full mb-3 px-3 py-2 rounded bg-[rgba(255,255,255,0.1)] text-white">
         <option value="drive">Drive</option>
         <option value="reves">Revés</option>
+      </select>
+
+      {/* 👇 nuevo campo */}
+      <select
+        value={categoriaDeclarada}
+        onChange={(e) => setCategoriaDeclarada(e.target.value)}
+        className="w-full mb-3 px-3 py-2 rounded bg-[rgba(255,255,255,0.1)] text-white"
+      >
+        <option value="primera">Primera</option>
+        <option value="segunda">Segunda</option>
+        <option value="tercera">Tercera</option>
+        <option value="cuarta">Cuarta</option>
+        <option value="quinta">Quinta</option>
+        <option value="sexta">Sexta</option>
+        <option value="septima">Séptima</option>
+        <option value="octava">Octava</option>
       </select>
 
       <button type="submit" className="bg-[var(--color-primary)] text-[var(--color-light)] px-4 py-2 rounded-lg hover:opacity-90">

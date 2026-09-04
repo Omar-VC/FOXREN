@@ -8,6 +8,7 @@ import { TorneosPage } from "./features/torneos/pages/TorneosPage";
 import { RankingPage } from "./features/ranking/pages/RankingPage";
 import { AdminDashboard } from "./features/admin/pages/AdminDashboard";
 import { AuthPage } from "./features/auth/pages/AuthPage";
+import { UnirsePage } from "./features/unirse/pages/UnirsePage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="parejas" element={<ParejasPage />} />
           <Route path="torneos" element={<TorneosPage />} />
           <Route path="ranking" element={<RankingPage />} />
+          <Route path="unirse" element={<UnirsePage />} />
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="auth" element={<AuthPage />} />
         </Route>
