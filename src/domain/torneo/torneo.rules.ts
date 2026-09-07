@@ -1,12 +1,14 @@
-import type { Torneo } from "./torneo.types";
+// src/domain/torneo/torneo.rules.ts
 
-export function torneoEstaActivo(torneo: Torneo): boolean {
+import type { Torneo } from './torneo.types';
+
+export const puedeInscribirseATorneo = (torneo: Torneo): boolean => {
   return (
-    torneo.estado === "abierto" ||
-    torneo.estado === "en_curso"
+    torneo.estado === "INSCRIPCION_ABIERTA" ||
+    torneo.estado === "EN_CURSO"
   );
-}
+};
 
-export function torneoEstaFinalizado(torneo: Torneo): boolean {
-  return torneo.estado === "finalizado";
-}
+export const estaTorneoFinalizado = (torneo: Torneo): boolean => {
+  return torneo.estado === "FINALIZADO";
+};

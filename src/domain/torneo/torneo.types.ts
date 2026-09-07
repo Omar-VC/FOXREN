@@ -1,23 +1,20 @@
-export type EstadoTorneo =
-  | "borrador"
-  | "abierto"
-  | "en_curso"
-  | "finalizado"
-  | "cancelado";
+
+// src/domain/torneo/torneo.types.ts
+
+export type EstadoTorneo = 'BORRADOR' | 'INSCRIPCION_ABIERTA' | 'EN_CURSO' | 'FINALIZADO';
 
 export interface Torneo {
   id: string;
-
-  nombre: string;
-  descripcion?: string;
-
   circuitoId: string;
-  organizadorIds: string[];
-
+  nombre: string;
+  sede: string;
   fechaInicio: Date;
   fechaFin: Date;
-
+  categoriasValidas: string[];
   estado: EstadoTorneo;
-
-  llaveId: string;
+  descripcion?: string | null;
+  organizadorIds?: string[];
+  llaveId?: string;
+  organizadorLlaveId?: string;
+  fechaCreacion?: Date;
 }

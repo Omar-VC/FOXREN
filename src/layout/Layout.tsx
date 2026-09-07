@@ -1,3 +1,5 @@
+// src/layout/Layout.tsx
+
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import Logo from "../assets/logo.svg";
@@ -6,16 +8,14 @@ export const Layout: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
 
+  // Enlaces públicos limpios según la Biblia del ecosistema
   const navLinks = [
     { to: "/", label: "Inicio" },
-    { to: "/competencias", label: "Competencias" },
-    { to: "/jugadores", label: "Jugadores" },
-    { to: "/parejas", label: "Parejas" },
+    { to: "/circuitos", label: "Circuitos" },
     { to: "/torneos", label: "Torneos" },
     { to: "/ranking", label: "Ranking" },
-    { to: "/unirse", label: "Unirse" },
-    { to: "/admin", label: "Admin" },
-    { to: "/auth", label: "Login" },
+    { to: "/jugadores", label: "Jugadores" },
+    { to: "/unirse", label: "Unirme" },
   ];
 
   return (

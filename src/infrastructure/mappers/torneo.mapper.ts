@@ -1,32 +1,36 @@
-import { Timestamp } from "firebase/firestore";
-import type { Torneo } from "../../domain/torneo/torneo.types";
+// src/infrastructure/mappers/torneo.mapper.ts
 
-// Convierte Torneo → Firestore
-export const toFirestoreTorneo = (torneo: Torneo) => {
-  return {
-    id: torneo.id,
-    nombre: torneo.nombre,
-    descripcion: torneo.descripcion ?? null,
-    circuitoId: torneo.circuitoId,
-    organizadorIds: torneo.organizadorIds,
-    fechaInicio: Timestamp.fromDate(torneo.fechaInicio),
-    fechaFin: Timestamp.fromDate(torneo.fechaFin),
-    estado: torneo.estado ?? "borrador",
-    llaveId: torneo.llaveId,
-  };
-};
+import type { Torneo } from '../../domain/torneo/torneo.types';
 
-// Convierte Firestore → Torneo
-export const fromFirestoreTorneo = (doc: any): Torneo => {
-  return {
-    id: doc.id,
-    nombre: doc.nombre,
-    descripcion: doc.descripcion ?? undefined,
-    circuitoId: doc.circuitoId,
-    organizadorIds: doc.organizadorIds ?? [],
-    fechaInicio: (doc.fechaInicio as Timestamp).toDate(),
-    fechaFin: (doc.fechaFin as Timestamp).toDate(),
-    estado: doc.estado ?? "borrador",
-    llaveId: doc.llaveId,
-  };
+export const torneoMapper = {
+  toFirestore(torneo: Torneo) {
+    return {
+      circuitoId: torneo.circuitoId,
+      nombre: torneo.nombre,
+      sede: torneo.sede,
+      fechaInicio: torneo.fechaInicio,
+      fechaFin: torneo.fechaFin,
+      categoriasValidas: torneo.categoriasValidas,
+      estado: torneo.estado,
+      descripcion: torneo.descripcion ?? null,
+      organizadorIds: torneo.organizadorIds ?? [],
+      llaveId: torneo.llaveId ?? torneo.organizadorLlaveId ?? null,
+    };
+  },
+
+  fromFirestore(id: string, doc: any): Torneo {
+    return {
+      id,
+      circuitoId: doc.circuitoId,
+      nombre: doc.nombre,
+      sede: doc.sede,
+      fechaInicio: doc.fechaInicio?.toDate ? doc.fechaInicio.toDate() : new Date(doc.fechaInicio),
+      fechaFin: doc.fechaFin?.toDate ? doc.fechaFin.toDate() : new Date(doc.fechaFin),
+      categoriasValidas: doc.categoriasValidas || [],
+      estado: doc.estado || 'INSCRIPCION_ABIERTA',
+      descripcion: doc.descripcion ?? undefined,
+      organizadorIds: doc.organizadorIds || [],
+      llaveId: doc.llaveId || undefined,
+    };
+  }
 };

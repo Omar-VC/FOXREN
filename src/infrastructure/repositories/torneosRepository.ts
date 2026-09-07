@@ -1,28 +1,45 @@
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../firebase/firebase";
-import { COLLECTIONS } from "../firebase/collections";
-import type { Torneo } from "../../domain/torneo/torneo.types";
-import { toFirestoreTorneo, fromFirestoreTorneo } from "../mappers/torneo.mapper";
+// src/infrastructure/repositories/torneosRepository.ts
 
-// Crear torneo
-export const crearTorneo = async (torneo: Torneo): Promise<void> => {
-  await addDoc(collection(db, COLLECTIONS.torneos), toFirestoreTorneo(torneo));
-};
+import { collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
+import { COLLECTIONS } from '../firebase/collections';
+import type { Torneo } from '../../domain/torneo/torneo.types';
 
-// Listar torneos
-export const listarTorneos = async (): Promise<Torneo[]> => {
-  const snapshot = await getDocs(collection(db, COLLECTIONS.torneos));
-  return snapshot.docs.map(docSnap => fromFirestoreTorneo({ id: docSnap.id, ...docSnap.data() }));
-};
+export const torneosRepository = {
+  /**
+   * Obtiene todos los torneos registrados
+   */
+  async obtenerTorneos(): Promise<Torneo[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.torneos));
+    return snap.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })) as Torneo[];
+  },
 
-// Actualizar torneo
-export const actualizarTorneo = async (id: string, torneo: Partial<Torneo>): Promise<void> => {
-  const torneoRef = doc(db, COLLECTIONS.torneos, id);
-  await updateDoc(torneoRef, toFirestoreTorneo({ ...torneo, id } as Torneo));
-};
+  /**
+   * Obtiene torneos pertenecientes a un circuito específico
+   */
+  async obtenerTorneosPorCircuito(circuitoId: string): Promise<Torneo[]> {
+    const q = query(collection(db, COLLECTIONS.torneos), where("circuitoId", "==", circuitoId));
+    const snap = await getDocs(q);
+    return snap.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })) as Torneo[];
+  },
 
-// Eliminar torneo
-export const eliminarTorneo = async (id: string): Promise<void> => {
-  const torneoRef = doc(db, COLLECTIONS.torneos, id);
-  await deleteDoc(torneoRef);
+  /**
+   * Crea un nuevo torneo vinculado a un circuito
+   */
+  async crearTorneo(datos: Omit<Torneo, 'id' | 'fechaCreacion'>): Promise<string> {
+    const nuevoTorneo = {
+      ...datos,
+      estado: datos.estado || 'INSCRIPCION_ABIERTA',
+      fechaCreacion: Timestamp.now(),
+    };
+
+    const docRef = await addDoc(collection(db, COLLECTIONS.torneos), nuevoTorneo);
+    return docRef.id;
+  }
 };
