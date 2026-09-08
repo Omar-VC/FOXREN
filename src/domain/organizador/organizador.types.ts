@@ -3,12 +3,12 @@ export type EstadoOrganizador =
   | "inactivo";
 
 export interface Organizador {
-  id: string;
-
-  nombre: string;
-  apellido: string;
-
-  email: string;
-
-  estado: EstadoOrganizador;
+  id?: string;
+  dniCuit: string;
+  nombreCompleto: string;
+  clubSede: string;
+  telefono: string;
+  localidad: string;
+  estado: 'activo' | 'inactivo';
+  fechaRegistro?: Date;
 }

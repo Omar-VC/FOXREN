@@ -1,129 +1,168 @@
 // src/features/admin/pages/GestionCircuitos.tsx
 
-import React, { useState, useEffect } from 'react';
-import { circuitosRepository } from '../../../infrastructure/repositories/circuitosRepository';
-import type { Circuito } from '../../../domain/circuito/circuito.types';
+import React, { useEffect, useState } from "react";
+import { circuitosRepository } from "../../../infrastructure/repositories/circuitosRepository";
+import { db } from "../../../infrastructure/firebase/firebase";
+import { collection, addDoc, getDocs, Timestamp } from "firebase/firestore";
+import { COLLECTIONS } from "../../../infrastructure/firebase/collections";
+import type { Circuito } from "../../../domain/circuito/circuito.types";
+
+interface LlaveData {
+  id: string;
+  codigo: string;
+  circuitoId: string;
+  nombreOrganizador: string;
+  estado: string;
+}
 
 export const GestionCircuitos: React.FC = () => {
   const [circuitos, setCircuitos] = useState<Circuito[]>([]);
+  const [llaves, setLlaves] = useState<LlaveData[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Formulario Circuito
-  const [nombre, setNombre] = useState('');
-  const [temporada, setTemporada] = useState('2026');
+  const [nombreCircuito, setNombreCircuito] = useState("");
+  const [temporada, setTemporada] = useState("2026");
 
   // Formulario Llave
-  const [circuitoSeleccionado, setCircuitoSeleccionado] = useState('');
-  const [nombreOrg, setNombreOrg] = useState('');
-  const [emailOrg, setEmailOrg] = useState('');
-  const [llaveGenerada, setLlaveGenerada] = useState<string | null>(null);
+  const [circuitoSeleccionado, setCircuitoSeleccionado] = useState("");
+  const [nombreOrganizador, setNombreOrganizador] = useState("");
+  const [llaveGenerada, setLlaveGenerada] = useState("");
 
   useEffect(() => {
-    cargarCircuitos();
+    cargarDatos();
   }, []);
 
-  const cargarCircuitos = async () => {
-    setLoading(true);
-    const data = await circuitosRepository.obtenerCircuitos();
-    setCircuitos(data);
-    if (data.length > 0) setCircuitoSeleccionado(data[0].id);
-    setLoading(false);
+  const cargarDatos = async () => {
+    try {
+      const dataCircuitos = await circuitosRepository.obtenerCircuitos();
+      setCircuitos(dataCircuitos);
+
+      const snapLlaves = await getDocs(
+        collection(db, COLLECTIONS.llavesOrganizadores),
+      );
+      const listLlaves = snapLlaves.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as LlaveData[];
+      setLlaves(listLlaves);
+    } catch (err) {
+      console.error("Error al cargar datos:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCrearCircuito = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim()) return alert('Ingresá el nombre del circuito');
-
     try {
       await circuitosRepository.crearCircuito({
-        nombre,
-        temporada,
-        estado: 'activo',
+        nombre: nombreCircuito,
+        temporada: temporada, // <- Se envía directamente como string ("2026")
+        estado: "activo", // <- En minúscula para coincidir con EstadoCircuito
       });
-      alert('¡Circuito creado con éxito!');
-      setNombre('');
-      cargarCircuitos();
+      alert("Circuito creado exitosamente");
+      setNombreCircuito("");
+      cargarDatos();
     } catch (err) {
       console.error(err);
-      alert('Error al crear circuito');
+      alert("Error al crear circuito");
     }
   };
 
-  const handleEmitirLlave = async (e: React.FormEvent) => {
+  const handleGenerarLlave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombreOrg || !emailOrg || !circuitoSeleccionado) {
-      return alert('Completá todos los campos de la llave');
+    if (!circuitoSeleccionado) {
+      alert("Seleccioná un circuito");
+      return;
     }
 
-    // Generamos un código corto alfanumérico para la llave (ej: FOX-8X912)
-    const codigoUnico = `FOX-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    const codigo = `FOX-${Math.random().toString(36).substring(2, 6).toUpperCase()}-2026`;
 
     try {
-      await circuitosRepository.emitirLlave({
-        codigo: codigoUnico,
+      await addDoc(collection(db, COLLECTIONS.llavesOrganizadores), {
+        codigo,
         circuitoId: circuitoSeleccionado,
-        nombreOrganizador: nombreOrg,
-        emailOrganizador: emailOrg,
+        nombreOrganizador,
+        estado: "activa",
+        fechaCreacion: Timestamp.now(),
       });
-      setLlaveGenerada(codigoUnico);
-      setNombreOrg('');
-      setEmailOrg('');
+
+      setLlaveGenerada(codigo);
+      setNombreOrganizador("");
+      cargarDatos();
     } catch (err) {
       console.error(err);
-      alert('Error al emitir llave');
+      alert("Error al generar la llave");
     }
   };
 
-  if (loading) return <p className="text-white p-6">Cargando circuitos...</p>;
+  if (loading)
+    return <p className="text-gray-400">Cargando gestión de circuitos...</p>;
 
   return (
-    <div className="space-y-8 text-white p-2">
-      {/* CREAR CIRCUITO */}
-      <section className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-        <h2 className="text-xl font-bold mb-4">Crear Nuevo Circuito</h2>
-        <form onSubmit={handleCrearCircuito} className="flex flex-wrap gap-4 items-end">
-          <div className="flex flex-col flex-1 min-w-[200px]">
-            <label className="text-xs text-gray-400 mb-1">Nombre del Circuito</label>
-            <input
-              type="text"
-              placeholder="Ej: Circuito Patagónico 2026"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col w-32">
-            <label className="text-xs text-gray-400 mb-1">Temporada</label>
-            <input
-              type="text"
-              value={temporada}
-              onChange={(e) => setTemporada(e.target.value)}
-              className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none"
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-green-600 hover:bg-green-500 font-medium px-4 py-2 rounded text-sm transition"
-          >
-            Crear Circuito
-          </button>
-        </form>
-      </section>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold text-[var(--color-primary-light)]">
+        Gestión de Circuitos y Llaves
+      </h1>
 
-      {/* EMITIR LLAVE DE ORGANIZADOR */}
-      <section className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-        <h2 className="text-xl font-bold mb-4">Emitir Llave para Organizador</h2>
-        {circuitos.length === 0 ? (
-          <p className="text-gray-400 text-sm">Primero debés crear un circuito para emitir llaves.</p>
-        ) : (
-          <form onSubmit={handleEmitirLlave} className="space-y-4 max-w-lg">
-            <div className="flex flex-col">
-              <label className="text-xs text-gray-400 mb-1">Seleccionar Circuito</label>
+      {/* SECCIÓN CREAR Y EMITIR */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Crear Circuito */}
+        <div className="bg-gray-900/60 p-5 rounded-[var(--border-radius)] border border-gray-800">
+          <h2 className="text-lg font-bold mb-4">Nuevo Circuito</h2>
+          <form onSubmit={handleCrearCircuito} className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                Nombre del Circuito
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ej: Circuito Patagónico"
+                value={nombreCircuito}
+                onChange={(e) => setNombreCircuito(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                Temporada
+              </label>
+              <input
+                type="number"
+                required
+                value={temporada}
+                onChange={(e) => setTemporada(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-2 bg-[var(--color-primary)] font-bold rounded text-sm hover:opacity-90 transition"
+            >
+              Guardar Circuito
+            </button>
+          </form>
+        </div>
+
+        {/* Generar Llave */}
+        <div className="bg-gray-900/60 p-5 rounded-[var(--border-radius)] border border-gray-800">
+          <h2 className="text-lg font-bold mb-4">
+            Emitir Llave de Organizador
+          </h2>
+          <form onSubmit={handleGenerarLlave} className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                Circuito Asignado
+              </label>
               <select
+                required
                 value={circuitoSeleccionado}
                 onChange={(e) => setCircuitoSeleccionado(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
               >
+                <option value="">Seleccionar Circuito...</option>
                 {circuitos.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nombre} ({c.temporada})
@@ -131,48 +170,113 @@ export const GestionCircuitos: React.FC = () => {
                 ))}
               </select>
             </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs text-gray-400 mb-1">Nombre del Organizador / Club</label>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                Organizador / Club
+              </label>
               <input
                 type="text"
-                placeholder="Ej: Padel Club Neuquén"
-                value={nombreOrg}
-                onChange={(e) => setNombreOrg(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none"
+                required
+                placeholder="Ej: Neuquén Padel Club"
+                value={nombreOrganizador}
+                onChange={(e) => setNombreOrganizador(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
               />
             </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs text-gray-400 mb-1">Email del Organizador</label>
-              <input
-                type="email"
-                placeholder="organizador@email.com"
-                value={emailOrg}
-                onChange={(e) => setEmailOrg(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none"
-              />
-            </div>
-
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-500 font-medium px-4 py-2 rounded text-sm transition w-full"
+              className="w-full py-2 bg-amber-600 font-bold rounded text-sm hover:bg-amber-500 transition"
             >
-              Generar Llave de Acceso
+              Generar Llave
             </button>
           </form>
-        )}
 
-        {llaveGenerada && (
-          <div className="mt-4 p-4 bg-gray-900 border border-blue-500/50 rounded-lg">
-            <p className="text-sm text-gray-300">Llave generada con éxito:</p>
-            <p className="text-2xl font-mono font-bold text-yellow-400 mt-1">{llaveGenerada}</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Compartí este código con el organizador para que active su panel.
-            </p>
-          </div>
-        )}
-      </section>
+          {llaveGenerada && (
+            <div className="mt-4 p-3 bg-green-900/40 border border-green-500/50 rounded text-center">
+              <span className="text-xs text-gray-300 block">
+                Llave Generada:
+              </span>
+              <strong className="text-lg text-green-300 font-mono select-all">
+                {llaveGenerada}
+              </strong>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* TABLAS DE VISUALIZACIÓN */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-gray-800">
+        {/* Listado de Circuitos */}
+        <div>
+          <h2 className="text-lg font-bold mb-3 text-[var(--color-primary-light)]">
+            Circuitos Activos
+          </h2>
+          {circuitos.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay circuitos creados.</p>
+          ) : (
+            <ul className="space-y-2">
+              {circuitos.map((c) => (
+                <li
+                  key={c.id}
+                  className="p-3 bg-gray-900/80 border border-gray-800 rounded flex justify-between items-center text-sm"
+                >
+                  <div>
+                    <strong className="text-white block">{c.nombre}</strong>
+                    <span className="text-xs text-gray-400">
+                      Temporada {c.temporada}
+                    </span>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 bg-green-900/60 text-green-300 border border-green-700/50 rounded">
+                    {c.estado}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Listado de Llaves Emitidas */}
+        <div>
+          <h2 className="text-lg font-bold mb-3 text-[var(--color-primary-light)]">
+            Llaves Emitidas
+          </h2>
+          {llaves.length === 0 ? (
+            <p className="text-sm text-gray-500">No se han emitido llaves.</p>
+          ) : (
+            <ul className="space-y-2">
+              {llaves.map((l) => {
+                const circuitoAsociado = circuitos.find(
+                  (c) => c.id === l.circuitoId,
+                );
+                return (
+                  <li
+                    key={l.id}
+                    className="p-3 bg-gray-900/80 border border-gray-800 rounded flex justify-between items-center text-sm"
+                  >
+                    <div>
+                      <strong className="text-amber-400 font-mono block">
+                        {l.codigo}
+                      </strong>
+                      <span className="text-xs text-gray-300">
+                        {l.nombreOrganizador}
+                      </span>
+                      <span className="text-xs text-gray-500 block">
+                        Circuito:{" "}
+                        {circuitoAsociado
+                          ? circuitoAsociado.nombre
+                          : "No asignado"}
+                      </span>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 bg-blue-900/60 text-blue-300 border border-blue-700/50 rounded">
+                      {l.estado}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

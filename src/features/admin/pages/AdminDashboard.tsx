@@ -6,25 +6,34 @@ import { updateDoc, doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { useJugadores } from "../../jugadores/hooks/useJugadores";
-import { 
-  aprobarSolicitudJugador, 
-  rechazarSolicitudJugador, 
-  cambiarEstadoJugador 
+import {
+  aprobarSolicitudJugador,
+  rechazarSolicitudJugador,
+  cambiarEstadoJugador,
 } from "../services/adminHelpers";
 import { GestionCircuitos } from "./GestionCircuitos";
+import { GestionOrganizadores } from "./GestionOrganizadores";
+import { AprobarTorneos } from "./AprobarTorneos"; // <- Agregado
 import Logo from "../../../assets/logo.svg";
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { jugadores: pendientes, loading: loadingPendientes } = useJugadores("pendiente");
-  const { jugadores: activos, loading: loadingActivos } = useJugadores("activo");
-  
-  const [seccionActiva, setSeccionActiva] = useState<"solicitudes" | "jugadores" | "circuitos">("solicitudes");
-  const [menuOpen, setMenuOpen] = useState(false); // Estado para responsive
+  const { jugadores: pendientes, loading: loadingPendientes } =
+    useJugadores("pendiente");
+  const { jugadores: activos, loading: loadingActivos } =
+    useJugadores("activo");
+
+  // Agregamos "aprobaciones" al union type
+  const [seccionActiva, setSeccionActiva] = useState<
+    "solicitudes" | "jugadores" | "circuitos" | "organizadores" | "aprobaciones"
+  >("solicitudes");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState<any>(null);
   const [editData, setEditData] = useState<any>({});
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<{ [key: string]: string }>({});
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<{
+    [key: string]: string;
+  }>({});
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -32,12 +41,18 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleAprobar = async (solicitud: any) => {
-    const catDeclarada = (solicitud.categoriaDeclarada || solicitud.nivelInicial || "OCTAVA").toUpperCase();
+    const catDeclarada = (
+      solicitud.categoriaDeclarada ||
+      solicitud.nivelInicial ||
+      "OCTAVA"
+    ).toUpperCase();
     const catOficial = categoriaSeleccionada[solicitud.id] || catDeclarada;
 
     try {
       await aprobarSolicitudJugador(solicitud, catOficial);
-      alert(`Jugador ${solicitud.nombre} ${solicitud.apellido} aprobado en categoría ${catOficial}.`);
+      alert(
+        `Jugador ${solicitud.nombre} ${solicitud.apellido} aprobado en categoría ${catOficial}.`,
+      );
     } catch (error) {
       console.error(error);
       alert("Error al aprobar la solicitud.");
@@ -55,7 +70,10 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleCambiarEstado = async (id: string, nuevoEstado: "activo" | "inactivo") => {
+  const handleCambiarEstado = async (
+    id: string,
+    nuevoEstado: "activo" | "inactivo",
+  ) => {
     const accion = nuevoEstado === "inactivo" ? "desactivar" : "activar";
     if (confirm(`¿Seguro que deseas ${accion} a este jugador?`)) {
       try {
@@ -80,14 +98,18 @@ export const AdminDashboard: React.FC = () => {
   };
 
   if (loadingPendientes || loadingActivos) {
-    return <p className="text-white p-6 font-semibold">Cargando panel de control...</p>;
+    return (
+      <p className="text-white p-6 font-semibold">
+        Cargando panel de control...
+      </p>
+    );
   }
 
   const jugadoresFiltrados = activos.filter(
     (j) =>
       j.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       j.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.dni.toLowerCase().includes(searchTerm.toLowerCase())
+      j.dni.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -96,7 +118,9 @@ export const AdminDashboard: React.FC = () => {
       <div className="md:hidden flex items-center justify-between p-4 bg-black/60 border-b border-gray-800">
         <div className="flex items-center gap-2">
           <img src={Logo} alt="FOXREN" className="h-6 w-auto" />
-          <span className="font-bold text-lg text-[var(--color-primary-light)]">FOXREN Admin</span>
+          <span className="font-bold text-lg text-[var(--color-primary-light)]">
+            FOXREN Admin
+          </span>
         </div>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -122,7 +146,9 @@ export const AdminDashboard: React.FC = () => {
       >
         <div className="hidden md:flex items-center gap-3 mb-8">
           <img src={Logo} alt="FOXREN" className="h-8 w-auto" />
-          <h2 className="text-xl font-bold text-[var(--color-primary-light)]">FOXREN Admin</h2>
+          <h2 className="text-xl font-bold text-[var(--color-primary-light)]">
+            FOXREN Admin
+          </h2>
         </div>
 
         <nav className="flex flex-col space-y-2 flex-1">
@@ -143,6 +169,24 @@ export const AdminDashboard: React.FC = () => {
                 {pendientes.length}
               </span>
             )}
+          </button>
+
+          {/* Botón Aprobación de Torneos (Canon) */}
+          <button
+            onClick={() => {
+              setSeccionActiva("aprobaciones");
+              setMenuOpen(false);
+            }}
+            className={`text-left px-4 py-3 rounded-[var(--border-radius)] flex justify-between items-center transition ${
+              seccionActiva === "aprobaciones"
+                ? "bg-[var(--color-primary)] text-white font-bold shadow-[var(--shadow-card)]"
+                : "hover:bg-[var(--overlay-light)] text-gray-300"
+            }`}
+          >
+            <span>Aprobar Torneos</span>
+            <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-bold">
+              Canon
+            </span>
           </button>
 
           <button
@@ -172,6 +216,20 @@ export const AdminDashboard: React.FC = () => {
           >
             Circuitos y Llaves
           </button>
+
+          <button
+            onClick={() => {
+              setSeccionActiva("organizadores");
+              setMenuOpen(false);
+            }}
+            className={`text-left px-4 py-3 rounded-[var(--border-radius)] transition ${
+              seccionActiva === "organizadores"
+                ? "bg-[var(--color-primary)] text-white font-bold shadow-[var(--shadow-card)]"
+                : "hover:bg-[var(--overlay-light)] text-gray-300"
+            }`}
+          >
+            Organizadores
+          </button>
         </nav>
 
         {/* Botón Cerrar Sesión */}
@@ -195,30 +253,47 @@ export const AdminDashboard: React.FC = () => {
             ) : (
               <ul className="space-y-4">
                 {pendientes.map((sol) => (
-                  <li key={sol.id} className="bg-gray-900/60 p-4 md:p-5 rounded-[var(--border-radius)] flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border border-gray-800 shadow-[var(--shadow-card)]">
+                  <li
+                    key={sol.id}
+                    className="bg-gray-900/60 p-4 md:p-5 rounded-[var(--border-radius)] flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border border-gray-800 shadow-[var(--shadow-card)]"
+                  >
                     <div className="flex flex-col">
                       <span className="font-bold text-lg">
-                        {sol.nombre} {sol.apellido} {sol.apodo ? `("${sol.apodo}")` : ""}
+                        {sol.nombre} {sol.apellido}{" "}
+                        {sol.apodo ? `("${sol.apodo}")` : ""}
                       </span>
                       <span className="text-sm text-gray-400">
-                        DNI: {sol.dni} | Ciudad: {sol.ciudad} | Lado: {sol.ladoJuego}
+                        DNI: {sol.dni} | Ciudad: {sol.ciudad} | Lado:{" "}
+                        {sol.ladoJuego}
                       </span>
                       <span className="text-sm text-yellow-400 mt-1">
-                        Cat. declarada: {sol.nivelInicial || sol.categoriaDeclarada || "No especificado"}
+                        Cat. declarada:{" "}
+                        {sol.nivelInicial ||
+                          sol.categoriaDeclarada ||
+                          "No especificado"}
                       </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                       <div className="flex flex-col flex-1 md:flex-initial">
-                        <label className="text-xs text-gray-400 mb-1">Cat. Oficial</label>
+                        <label className="text-xs text-gray-400 mb-1">
+                          Cat. Oficial
+                        </label>
                         <select
                           className="bg-gray-800 text-white px-3 py-1.5 rounded border border-gray-700 text-sm focus:outline-none"
                           value={
-                            categoriaSeleccionada[sol.id] || 
-                            (sol.categoriaDeclarada || sol.nivelInicial || "OCTAVA").toUpperCase()
+                            categoriaSeleccionada[sol.id] ||
+                            (
+                              sol.categoriaDeclarada ||
+                              sol.nivelInicial ||
+                              "OCTAVA"
+                            ).toUpperCase()
                           }
                           onChange={(e) =>
-                            setCategoriaSeleccionada({ ...categoriaSeleccionada, [sol.id]: e.target.value })
+                            setCategoriaSeleccionada({
+                              ...categoriaSeleccionada,
+                              [sol.id]: e.target.value,
+                            })
                           }
                         >
                           <option value="PRIMERA">Primera</option>
@@ -252,6 +327,8 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {seccionActiva === "aprobaciones" && <AprobarTorneos />}
+
         {seccionActiva === "jugadores" && !jugadorSeleccionado && (
           <div>
             <h1 className="text-xl md:text-2xl font-bold mb-6 text-[var(--color-primary-light)]">
@@ -266,13 +343,20 @@ export const AdminDashboard: React.FC = () => {
             />
             <ul className="space-y-3">
               {jugadoresFiltrados.map((j) => (
-                <li key={j.id} className="bg-gray-900/60 p-4 rounded-[var(--border-radius)] flex flex-col md:flex-row gap-3 justify-between items-start md:items-center border border-gray-800">
+                <li
+                  key={j.id}
+                  className="bg-gray-900/60 p-4 rounded-[var(--border-radius)] flex flex-col md:flex-row gap-3 justify-between items-start md:items-center border border-gray-800"
+                >
                   <div className="flex flex-col">
                     <span className="font-semibold text-lg">
                       {j.nombre} {j.apellido} - DNI {j.dni}
                     </span>
                     <span className="text-sm text-gray-400">
-                      Categoría: <strong className="text-[var(--color-primary-light)]">{j.categoriaId || "Sin categoría"}</strong> | Estado: {j.estado}
+                      Categoría:{" "}
+                      <strong className="text-[var(--color-primary-light)]">
+                        {j.categoriaId || "Sin categoría"}
+                      </strong>{" "}
+                      | Estado: {j.estado}
                     </span>
                   </div>
                   <div className="flex items-center space-x-3 w-full md:w-auto">
@@ -286,9 +370,16 @@ export const AdminDashboard: React.FC = () => {
                       Ficha
                     </button>
                     <button
-                      onClick={() => handleCambiarEstado(j.id, j.estado === "activo" ? "inactivo" : "activo")}
+                      onClick={() =>
+                        handleCambiarEstado(
+                          j.id,
+                          j.estado === "activo" ? "inactivo" : "activo",
+                        )
+                      }
                       className={`${
-                        j.estado === "activo" ? "bg-amber-600 hover:bg-amber-500" : "bg-green-600 hover:bg-green-500"
+                        j.estado === "activo"
+                          ? "bg-amber-600 hover:bg-amber-500"
+                          : "bg-green-600 hover:bg-green-500"
                       } px-3.5 py-1.5 rounded text-sm font-semibold transition`}
                     >
                       {j.estado === "activo" ? "Inactivar" : "Activar"}
@@ -301,20 +392,28 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {seccionActiva === "circuitos" && <GestionCircuitos />}
+        {seccionActiva === "organizadores" && <GestionOrganizadores />}
 
         {jugadorSeleccionado && (
           <div className="bg-gray-900/90 p-6 rounded-[var(--border-radius)] border border-gray-700 shadow-[var(--shadow-card)]">
-            <h2 className="text-xl font-bold mb-4">Editar Ficha: {jugadorSeleccionado.nombre} {jugadorSeleccionado.apellido}</h2>
+            <h2 className="text-xl font-bold mb-4">
+              Editar Ficha: {jugadorSeleccionado.nombre}{" "}
+              {jugadorSeleccionado.apellido}
+            </h2>
             <div className="space-y-3 max-w-lg">
               {Object.keys(editData).map((campo) => {
                 if (campo === "id" || campo === "fechaRegistro") return null;
                 return (
                   <div key={campo} className="flex flex-col">
-                    <label className="text-xs text-gray-400 font-semibold uppercase">{campo}</label>
+                    <label className="text-xs text-gray-400 font-semibold uppercase">
+                      {campo}
+                    </label>
                     <input
                       type="text"
                       value={editData[campo] || ""}
-                      onChange={(e) => setEditData({ ...editData, [campo]: e.target.value })}
+                      onChange={(e) =>
+                        setEditData({ ...editData, [campo]: e.target.value })
+                      }
                       className="px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 text-sm focus:outline-none"
                     />
                   </div>
@@ -322,10 +421,16 @@ export const AdminDashboard: React.FC = () => {
               })}
             </div>
             <div className="flex space-x-3 mt-6">
-              <button onClick={guardarCambios} className="bg-green-600 px-4 py-2 rounded font-bold hover:bg-green-500">
+              <button
+                onClick={guardarCambios}
+                className="bg-green-600 px-4 py-2 rounded font-bold hover:bg-green-500"
+              >
                 Guardar
               </button>
-              <button onClick={() => setJugadorSeleccionado(null)} className="bg-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-600">
+              <button
+                onClick={() => setJugadorSeleccionado(null)}
+                className="bg-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-600"
+              >
                 Cancelar
               </button>
             </div>
