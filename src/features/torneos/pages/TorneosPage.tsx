@@ -6,17 +6,28 @@ import { circuitosRepository } from "../../../infrastructure/repositories/circui
 import type { Torneo } from "../../../domain/torneo/torneo.types";
 import type { Circuito } from "../../../domain/circuito/circuito.types";
 import { validarLlaveOrganizador } from "../../admin/services/llaveService";
+import { InscripcionModal } from "../components/InscripcionModal";
+import { GestionInscriptosModal } from "../components/GestionInscriptosModal";
 
 export const TorneosPage: React.FC = () => {
   const [torneos, setTorneos] = useState<Torneo[]>([]);
   const [circuitos, setCircuitos] = useState<Circuito[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para el Modal del Organizador
-  const [mostrarModal, setMostrarModal] = useState(false);
+  // Estados para controlar los modales
+  const [torneoParaInscribir, setTorneoParaInscribir] = useState<Torneo | null>(null);
+  const [torneoParaGestionar, setTorneoParaGestionar] = useState<Torneo | null>(null);
+
+  // Estados para el Modal de Crear Torneo (Organizador)
+  const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
   const [llaveIngresada, setLlaveIngresada] = useState("");
   const [llaveValida, setLlaveValida] = useState(false);
   const [errorLlave, setErrorLlave] = useState("");
+
+  // Estados para solicitar llave al querer gestionar un torneo
+  const [torneoAAcceder, setTorneoAAcceder] = useState<Torneo | null>(null);
+  const [llaveGestion, setLlaveGestion] = useState("");
+  const [errorLlaveGestion, setErrorLlaveGestion] = useState("");
 
   // Formulario de nuevo torneo
   const [circuitoId, setCircuitoId] = useState("");
@@ -40,12 +51,12 @@ export const TorneosPage: React.FC = () => {
       setCircuitos(listCircuitos);
     } catch (error) {
       console.error("Error al cargar torneos/circuitos:", error);
-    } finally {
+    } finally { // <-- Aquí estaba el error
       setLoading(false);
     }
   };
 
-  const validarLlave = async (e: React.FormEvent) => {
+  const validarLlaveCreacion = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorLlave("");
 
@@ -60,6 +71,26 @@ export const TorneosPage: React.FC = () => {
       setLlaveValida(true);
     } else {
       setErrorLlave(resultado.mensaje || "Llave inválida.");
+    }
+  };
+
+  const validarLlaveAccesoGestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorLlaveGestion("");
+
+    if (!llaveGestion.trim()) {
+      setErrorLlaveGestion("Ingresá tu llave para gestionar.");
+      return;
+    }
+
+    const resultado = await validarLlaveOrganizador(llaveGestion);
+
+    if (resultado.valida) {
+      setTorneoParaGestionar(torneoAAcceder);
+      setTorneoAAcceder(null);
+      setLlaveGestion("");
+    } else {
+      setErrorLlaveGestion(resultado.mensaje || "Llave inválida.");
     }
   };
 
@@ -78,20 +109,30 @@ export const TorneosPage: React.FC = () => {
         fechaInicio: new Date(fechaInicio),
         fechaFin: new Date(fechaFin),
         categoriasValidas: categorias,
-        precioInscripcionBase: 20000,   // Monto base referencial que cobra el organizador
-        feeFoxrenPorPareja: 10000,      // Tu comisión fija por pareja
-        estado: 'PENDIENTE_APROBACION', // Entra directo en revisión para tu aprobación/canon
+        precioInscripcionBase: 20000,
+        feeFoxrenPorPareja: 10000,
+        estado: "PENDIENTE_APROBACION",
         organizadorLlaveId: llaveIngresada,
       });
 
-      alert("Torneo registrado con éxito. Quedó en estado 'Pendiente de Aprobación' hasta verificar el pago del canon.");
-      setMostrarModal(false);
+      alert(
+        "Torneo registrado con éxito. Quedó en estado 'Pendiente de Aprobación' hasta verificar el pago del canon.",
+      );
+      setMostrarModalCrear(false);
       setLlaveValida(false);
       setLlaveIngresada("");
       cargarDatos();
     } catch (err) {
       console.error(err);
       alert("Error al guardar el torneo.");
+    }
+  };
+
+  const toggleCategoria = (cat: string) => {
+    if (categorias.includes(cat)) {
+      setCategorias(categorias.filter((c) => c !== cat));
+    } else {
+      setCategorias([...categorias, cat]);
     }
   };
 
@@ -103,14 +144,6 @@ export const TorneosPage: React.FC = () => {
     );
   }
 
-  const toggleCategoria = (cat: string) => {
-    if (categorias.includes(cat)) {
-      setCategorias(categorias.filter((c) => c !== cat));
-    } else {
-      setCategorias([...categorias, cat]);
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -119,15 +152,13 @@ export const TorneosPage: React.FC = () => {
             Calendario de Torneos
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Fechas confirmadas, sedes e inscripciones abiertas para las
-            distintas categorías.
+            Fechas confirmadas, sedes e inscripciones abiertas para las distintas categorías.
           </p>
         </div>
 
-        {/* BOTÓN PARA ORGANIZADORES */}
         <button
-          onClick={() => setMostrarModal(true)}
-          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold text-sm rounded-[var(--border-radius)] transition shadow"
+          onClick={() => setMostrarModalCrear(true)}
+          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold text-sm rounded-[var(--border-radius)] transition shadow cursor-pointer"
         >
           🔑 ¿Sos Organizador? Crear Torneo
         </button>
@@ -147,7 +178,7 @@ export const TorneosPage: React.FC = () => {
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-xs font-bold px-2.5 py-1 bg-green-600/80 text-white rounded">
-                    {torneo.estado.replace("_", " ")}
+                    {torneo.estado ? torneo.estado.replace("_", " ") : "ACTIVO"}
                   </span>
                   <span className="text-xs text-gray-400">
                     Sede: <strong className="text-white">{torneo.sede}</strong>
@@ -170,26 +201,103 @@ export const TorneosPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
-                <span>
-                  Inicio: {new Date(torneo.fechaInicio).toLocaleDateString()}
-                </span>
-                <button className="px-3 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white font-bold rounded transition">
-                  Inscribirse / Ver Cuadro
-                </button>
+              <div>
+                <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+                  <span>
+                    Inicio:{" "}
+                    {torneo.fechaInicio
+                      ? new Date(torneo.fechaInicio).toLocaleDateString()
+                      : "A confirmar"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-gray-800">
+                  <button
+                    onClick={() => setTorneoParaInscribir(torneo)}
+                    className="w-full py-2 px-3 bg-green-600 hover:bg-green-500 font-semibold rounded-lg text-white text-xs transition cursor-pointer text-center flex items-center justify-center min-h-[36px]"
+                  >
+                    Inscribirse / Cuadro
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setTorneoAAcceder(torneo);
+                      setErrorLlaveGestion("");
+                      setLlaveGestion("");
+                    }}
+                    className="w-full py-2 px-3 bg-gray-800 hover:bg-gray-700 text-amber-400 font-semibold rounded-lg text-xs transition border border-gray-700 cursor-pointer text-center flex items-center justify-center min-h-[36px]"
+                  >
+                    🔒 Gestionar
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* MODAL PARA ORGANIZADOR */}
-      {mostrarModal && (
+      {/* MODAL INSCRIPCIÓN JUGADORES */}
+      {torneoParaInscribir && (
+        <InscripcionModal
+          torneo={torneoParaInscribir}
+          onClose={() => setTorneoParaInscribir(null)}
+          onInscripcionExitosa={() => {
+            setTorneoParaInscribir(null);
+            cargarDatos();
+          }}
+        />
+      )}
+
+      {/* MODAL VALIDAR LLAVE PARA GESTIONAR */}
+      {torneoAAcceder && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-sm w-full p-6 relative shadow-2xl">
+            <button
+              onClick={() => setTorneoAAcceder(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
+            <h3 className="text-lg font-bold text-amber-400 mb-2">
+              Acceso Restringido
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              Ingresá tu Llave de Organizador para gestionar las inscripciones de <strong>{torneoAAcceder.nombre}</strong>.
+            </p>
+
+            {errorLlaveGestion && (
+              <p className="text-xs text-red-400 bg-red-900/30 p-2 rounded mb-3 border border-red-800">
+                {errorLlaveGestion}
+              </p>
+            )}
+
+            <form onSubmit={validarLlaveAccesoGestion} className="space-y-4">
+              <input
+                type="text"
+                required
+                placeholder="Ej: FOX-KEY-8931"
+                value={llaveGestion}
+                onChange={(e) => setLlaveGestion(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none text-sm"
+              />
+              <button
+                type="submit"
+                className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded text-sm transition"
+              >
+                Ingresar al Panel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA ORGANIZADOR (CREAR TORNEO) */}
+      {mostrarModalCrear && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-[var(--border-radius)] max-w-lg w-full p-6 relative shadow-2xl">
             <button
               onClick={() => {
-                setMostrarModal(false);
+                setMostrarModalCrear(false);
                 setLlaveValida(false);
               }}
               className="absolute top-4 right-4 text-gray-400 hover:text-white"
@@ -203,8 +311,7 @@ export const TorneosPage: React.FC = () => {
                   Acceso Organizador
                 </h3>
                 <p className="text-sm text-gray-400 mb-4">
-                  Ingresá tu Llave de Autorización emitido por FOXREN para dar
-                  de alta un torneo.
+                  Ingresá tu Llave de Autorización emitida por FOXREN para dar de alta un torneo.
                 </p>
 
                 {errorLlave && (
@@ -213,7 +320,7 @@ export const TorneosPage: React.FC = () => {
                   </p>
                 )}
 
-                <form onSubmit={validarLlave} className="space-y-4">
+                <form onSubmit={validarLlaveCreacion} className="space-y-4">
                   <input
                     type="text"
                     required
@@ -236,10 +343,7 @@ export const TorneosPage: React.FC = () => {
                   Crear Nuevo Torneo
                 </h3>
 
-                <form
-                  onSubmit={handleCrearTorneo}
-                  className="space-y-3 text-sm"
-                >
+                <form onSubmit={handleCrearTorneo} className="space-y-3 text-sm">
                   <div>
                     <label className="block text-gray-400 mb-1">
                       Circuito al que pertenece
@@ -356,6 +460,14 @@ export const TorneosPage: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* MODAL DE GESTIÓN */}
+      {torneoParaGestionar && (
+        <GestionInscriptosModal
+          torneo={torneoParaGestionar}
+          onClose={() => setTorneoParaGestionar(null)}
+        />
       )}
     </div>
   );
