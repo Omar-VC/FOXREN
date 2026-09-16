@@ -25,7 +25,8 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
   const [fechaFin, setFechaFin] = useState("");
 
   const [torneoCreadoId, setTorneoCreadoId] = useState<string | null>(null);
-  const [mostrandoFormCompetencia, setMostrandoFormCompetencia] = useState(false);
+  const [mostrandoFormCompetencia, setMostrandoFormCompetencia] =
+    useState(false);
   const [errores, setErrores] = useState<string[]>([]);
   const [cargando, setCargando] = useState(false);
 
@@ -52,10 +53,14 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
       });
 
       setTorneoCreadoId(id);
-      alert("¡Torneo registrado correctamente! Ahora puedes agregar las categorías/competencias.");
+      alert(
+        "¡Torneo registrado correctamente! Ahora puedes agregar las categorías/competencias.",
+      );
     } catch (error) {
       console.error("Error al crear el torneo:", error);
-      setErrores(["Ocurrió un error al guardar el torneo en la base de datos."]);
+      setErrores([
+        "Ocurrió un error al guardar el torneo en la base de datos.",
+      ]);
     } finally {
       setCargando(false);
     }
@@ -78,21 +83,26 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">
-              Circuito Pertenezciente
+            <label className="block text-sm font-medium text-slate-300 mb-1">
+              Circuito
             </label>
             <select
-              required
               value={circuitoId}
               onChange={(e) => setCircuitoId(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
             >
-              <option value="">Seleccionar Circuito...</option>
-              {circuitos.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
+              <option value="">-- Seleccionar Circuito --</option>
+              {circuitos && circuitos.length > 0 ? (
+                circuitos.map((circuito: any) => (
+                  <option key={circuito.id} value={circuito.id}>
+                    {circuito.nombre}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>
+                  No hay circuitos creados
                 </option>
-              ))}
+              )}
             </select>
           </div>
 
@@ -176,13 +186,16 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
           <div className="bg-gray-800/80 border border-gray-700 p-4 rounded text-sm text-gray-300 space-y-1">
             <p className="font-bold text-white text-base">Torneo: {nombre}</p>
             <p>Sede: {sede}</p>
-            <p className="text-xs text-green-400">✓ Guardado en base de datos</p>
+            <p className="text-xs text-green-400">
+              ✓ Guardado en base de datos
+            </p>
           </div>
 
           {!mostrandoFormCompetencia ? (
             <div className="text-center py-6 space-y-4">
               <p className="text-sm text-gray-400">
-                Añade las categorías que competirán en este torneo (ej. 4ta, 5ta, Suma 11).
+                Añade las categorías que competirán en este torneo (ej. 4ta,
+                5ta, Suma 11).
               </p>
               <button
                 type="button"

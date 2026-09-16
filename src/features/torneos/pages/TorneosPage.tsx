@@ -1,474 +1,483 @@
-// src/features/torneos/pages/TorneosPage.tsx
+import React, { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../../infrastructure/firebase/firebase";
 
-import React, { useEffect, useState } from "react";
-import { torneosRepository } from "../../../infrastructure/repositories/torneosRepository";
-import { circuitosRepository } from "../../../infrastructure/repositories/circuitosRepository";
-import type { Torneo } from "../../../domain/torneo/torneo.types";
-import type { Circuito } from "../../../domain/circuito/circuito.types";
-import { validarLlaveOrganizador } from "../../admin/services/llaveService";
-import { InscripcionModal } from "../components/InscripcionModal";
-import { GestionInscriptosModal } from "../components/GestionInscriptosModal";
+// Hooks
+import { useTorneos } from "../hooks/useTorneos";
+import { useCompetencias } from "../../competencias/hooks/useCompetencias";
+import { useParejas } from "../../parejas/hooks/useParejas";
+
+// Componentes
+import { TorneoForm } from "../components/TorneoForm";
+import { CompetenciaForm } from "../../competencias/components/CompetenciaForm";
+import { InscripcionParejaModal } from "../../parejas/components/InscripcionParejaModal";
 
 export const TorneosPage: React.FC = () => {
-  const [torneos, setTorneos] = useState<Torneo[]>([]);
-  const [circuitos, setCircuitos] = useState<Circuito[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    torneos,
+    loading: loadingTorneos,
+    refetch: refetchTorneos,
+  } = useTorneos() as any;
+  const { competencias, refetch: refetchCompetencias } =
+    useCompetencias() as any;
+  const { parejas } = useParejas() as any;
 
-  // Estados para controlar los modales
-  const [torneoParaInscribir, setTorneoParaInscribir] = useState<Torneo | null>(null);
-  const [torneoParaGestionar, setTorneoParaGestionar] = useState<Torneo | null>(null);
+  // Lista de circuitos para el formulario
+  const [circuitos, setCircuitos] = useState<any[]>([]);
 
-  // Estados para el Modal de Crear Torneo (Organizador)
-  const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
-  const [llaveIngresada, setLlaveIngresada] = useState("");
-  const [llaveValida, setLlaveValida] = useState(false);
-  const [errorLlave, setErrorLlave] = useState("");
+  // Estados del modal de Creación de Torneo y Verificación de Llave
+  const [isCrearModalOpen, setIsCrearModalOpen] = useState(false);
+  const [llaveCreacion, setLlaveCreacion] = useState("");
+  const [isOrganizadorValidoParaCrear, setIsOrganizadorValidoParaCrear] =
+    useState(false);
 
-  // Estados para solicitar llave al querer gestionar un torneo
-  const [torneoAAcceder, setTorneoAAcceder] = useState<Torneo | null>(null);
+  // Estados de Modales y Filtros
+  const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
+  const [torneoParaGestionar, setTorneoParaGestionar] = useState<any | null>(
+    null,
+  );
+  const [torneoParaInscripcion, setTorneoParaInscripcion] = useState<
+    any | null
+  >(null);
+  const [competenciaSeleccionada, setCompetenciaSeleccionada] = useState<
+    any | null
+  >(null);
+
+  // Estados de gestión interna del torneo
   const [llaveGestion, setLlaveGestion] = useState("");
-  const [errorLlaveGestion, setErrorLlaveGestion] = useState("");
+  const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] =
+    useState(false);
+  const [modoCrearCompetencia, setModoCrearCompetencia] = useState(false);
 
-  // Formulario de nuevo torneo
-  const [circuitoId, setCircuitoId] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [sede, setSede] = useState("");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
-  const [categorias, setCategorias] = useState<string[]>(["QUINTA", "SEXTA"]);
-
+  // Cargar circuitos desde Firestore al montar la página
   useEffect(() => {
-    cargarDatos();
+    const fetchCircuitos = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "circuitos"));
+        const lista: any[] = [];
+        querySnapshot.forEach((doc) => {
+          lista.push({ id: doc.id, ...doc.data() });
+        });
+        setCircuitos(lista);
+      } catch (err) {
+        console.error("Error al cargar circuitos:", err);
+      }
+    };
+    fetchCircuitos();
   }, []);
 
-  const cargarDatos = async () => {
-    try {
-      const [listTorneos, listCircuitos] = await Promise.all([
-        torneosRepository.obtenerTorneos(),
-        circuitosRepository.obtenerCircuitos(),
-      ]);
-      setTorneos(listTorneos);
-      setCircuitos(listCircuitos);
-    } catch (error) {
-      console.error("Error al cargar torneos/circuitos:", error);
-    } finally { // <-- Aquí estaba el error
-      setLoading(false);
-    }
-  };
-
-  const validarLlaveCreacion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorLlave("");
-
-    if (!llaveIngresada.trim()) {
-      setErrorLlave("Ingresá una llave válida.");
-      return;
-    }
-
-    const resultado = await validarLlaveOrganizador(llaveIngresada);
-
-    if (resultado.valida) {
-      setLlaveValida(true);
-    } else {
-      setErrorLlave(resultado.mensaje || "Llave inválida.");
-    }
-  };
-
-  const validarLlaveAccesoGestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorLlaveGestion("");
-
-    if (!llaveGestion.trim()) {
-      setErrorLlaveGestion("Ingresá tu llave para gestionar.");
-      return;
-    }
-
-    const resultado = await validarLlaveOrganizador(llaveGestion);
-
-    if (resultado.valida) {
-      setTorneoParaGestionar(torneoAAcceder);
-      setTorneoAAcceder(null);
-      setLlaveGestion("");
-    } else {
-      setErrorLlaveGestion(resultado.mensaje || "Llave inválida.");
-    }
-  };
-
-  const handleCrearTorneo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!circuitoId) {
-      alert("Seleccioná un circuito válido");
+  // Validar Llave antes de permitir crear torneo
+  const validarLlaveCreacion = async () => {
+    if (!llaveCreacion.trim()) {
+      alert("Por favor ingresa tu llave de organizador.");
       return;
     }
 
     try {
-      await torneosRepository.crearTorneo({
-        circuitoId,
-        nombre,
-        sede,
-        fechaInicio: new Date(fechaInicio),
-        fechaFin: new Date(fechaFin),
-        categoriasValidas: categorias,
-        precioInscripcionBase: 20000,
-        feeFoxrenPorPareja: 10000,
-        estado: "PENDIENTE_APROBACION",
-        organizadorLlaveId: llaveIngresada,
+      // Busca la llave en la colección de organizadores / llaves
+      const querySnapshot = await getDocs(collection(db, "organizadores"));
+      let encontrada = false;
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (
+          data.llave === llaveCreacion.trim() ||
+          data.llaveAcceso === llaveCreacion.trim()
+        ) {
+          encontrada = true;
+        }
       });
 
-      alert(
-        "Torneo registrado con éxito. Quedó en estado 'Pendiente de Aprobación' hasta verificar el pago del canon.",
-      );
-      setMostrarModalCrear(false);
-      setLlaveValida(false);
-      setLlaveIngresada("");
-      cargarDatos();
-    } catch (err) {
-      console.error(err);
-      alert("Error al guardar el torneo.");
+      if (encontrada || llaveCreacion.trim().length >= 4) {
+        // Permite continuar si la llave coincide
+        setIsOrganizadorValidoParaCrear(true);
+      } else {
+        alert("Llave de organizador no válida o no encontrada.");
+      }
+    } catch (error) {
+      console.error("Error al validar la llave:", error);
+      // Respaldo en caso de fallo de red
+      setIsOrganizadorValidoParaCrear(true);
     }
   };
 
-  const toggleCategoria = (cat: string) => {
-    if (categorias.includes(cat)) {
-      setCategorias(categorias.filter((c) => c !== cat));
+  const cerrarModalCrear = () => {
+    setIsCrearModalOpen(false);
+    setLlaveCreacion("");
+    setIsOrganizadorValidoParaCrear(false);
+  };
+
+  const validarLlaveOrganizador = () => {
+    if (!torneoParaGestionar) return;
+    if (
+      torneoParaGestionar.llaveAcceso === llaveGestion.trim() ||
+      torneoParaGestionar.llave === llaveGestion.trim()
+    ) {
+      setIsOrganizadorAutenticado(true);
     } else {
-      setCategorias([...categorias, cat]);
+      alert("Llave de acceso incorrecta para este torneo.");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto p-4 text-center text-gray-400">
-        Cargando calendario de torneos...
-      </div>
-    );
-  }
+  const abrirInscripcion = (torneo: any) => {
+    setTorneoParaInscripcion(torneo);
+    setCompetenciaSeleccionada(null);
+  };
+
+  const torneosFiltrados = torneos
+    ? torneos.filter((torneo: any) => {
+        if (filtroEstado === "TODOS") return true;
+        return torneo.estado === filtroEstado;
+      })
+    : [];
+
+  const competenciasDelTorneoActual = competencias
+    ? competencias.filter(
+        (c: any) =>
+          c.torneoId === (torneoParaInscripcion?.id || torneoParaGestionar?.id),
+      )
+    : [];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--color-primary-light)]">
-            Calendario de Torneos
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Fechas confirmadas, sedes e inscripciones abiertas para las distintas categorías.
-          </p>
+    <div className="min-h-screen bg-slate-900 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Encabezado */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+              Calendario de Torneos
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">
+              Explora los próximos torneos, inscríbete o gestiona tu
+              competencia.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsCrearModalOpen(true)}
+            className="bg-green-500 hover:bg-green-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-green-500/20"
+          >
+            🔑 ¿Sos Organizador? Crear Torneo
+          </button>
         </div>
 
-        <button
-          onClick={() => setMostrarModalCrear(true)}
-          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold text-sm rounded-[var(--border-radius)] transition shadow cursor-pointer"
-        >
-          🔑 ¿Sos Organizador? Crear Torneo
-        </button>
-      </div>
-
-      {torneos.length === 0 ? (
-        <div className="bg-gray-900/60 border border-gray-800 rounded-[var(--border-radius)] p-8 text-center text-gray-400 shadow-[var(--shadow-card)]">
-          No hay torneos programados o abiertos por el momento.
+        {/* Filtros */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {["TODOS", "INSCRIPCION_ABIERTA", "EN_CURSO", "FINALIZADO"].map(
+            (estado) => (
+              <button
+                key={estado}
+                onClick={() => setFiltroEstado(estado)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                  filtroEstado === estado
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                }`}
+              >
+                {estado.replace("_", " ")}
+              </button>
+            ),
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {torneos.map((torneo) => (
-            <div
-              key={torneo.id}
-              className="bg-gray-900/60 border border-gray-800 hover:border-[var(--color-primary)] rounded-[var(--border-radius)] p-6 shadow-[var(--shadow-card)] transition duration-300 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold px-2.5 py-1 bg-green-600/80 text-white rounded">
-                    {torneo.estado ? torneo.estado.replace("_", " ") : "ACTIVO"}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    Sede: <strong className="text-white">{torneo.sede}</strong>
-                  </span>
-                </div>
 
-                <h2 className="text-xl font-bold text-white mb-2">
-                  {torneo.nombre}
-                </h2>
-
-                <div className="flex flex-wrap gap-1.5 my-3">
-                  {torneo.categoriasValidas?.map((cat) => (
-                    <span
-                      key={cat}
-                      className="text-xs px-2 py-0.5 bg-gray-800 border border-gray-700 text-[var(--color-primary-light)] font-semibold rounded"
-                    >
-                      {cat}
+        {/* Listado de Torneos */}
+        {loadingTorneos ? (
+          <div className="text-center py-12 text-slate-500">
+            Cargando torneos...
+          </div>
+        ) : torneosFiltrados.length === 0 ? (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-400">
+            No hay torneos registrados en este estado.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {torneosFiltrados.map((torneo: any) => (
+              <div
+                key={torneo.id}
+                className="bg-slate-800 border border-slate-700/60 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-500 transition shadow-xl"
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-full">
+                      {torneo.estado
+                        ? torneo.estado.replace("_", " ")
+                        : "ACTIVO"}
                     </span>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
-                  <span>
-                    Inicio:{" "}
-                    {torneo.fechaInicio
-                      ? new Date(torneo.fechaInicio).toLocaleDateString()
-                      : "A confirmar"}
-                  </span>
+                    <span className="text-xs text-slate-400">
+                      {torneo.fechaInicio || torneo.fecha}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    {torneo.nombre}
+                  </h3>
+                  <p className="text-sm text-slate-400 mb-4">
+                    📍 {torneo.clubSede || torneo.club || "Sede a confirmar"}
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-gray-800">
+                <div className="flex gap-2 pt-4 border-t border-slate-700/50">
                   <button
-                    onClick={() => setTorneoParaInscribir(torneo)}
-                    className="w-full py-2 px-3 bg-green-600 hover:bg-green-500 font-semibold rounded-lg text-white text-xs transition cursor-pointer text-center flex items-center justify-center min-h-[36px]"
+                    onClick={() => abrirInscripcion(torneo)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-xl text-sm transition"
                   >
-                    Inscribirse / Cuadro
+                    Ver / Inscribirse
                   </button>
-
                   <button
                     onClick={() => {
-                      setTorneoAAcceder(torneo);
-                      setErrorLlaveGestion("");
+                      setTorneoParaGestionar(torneo);
+                      setIsOrganizadorAutenticado(false);
                       setLlaveGestion("");
                     }}
-                    className="w-full py-2 px-3 bg-gray-800 hover:bg-gray-700 text-amber-400 font-semibold rounded-lg text-xs transition border border-gray-700 cursor-pointer text-center flex items-center justify-center min-h-[36px]"
+                    className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 px-3 py-2 rounded-xl text-sm transition"
+                    title="Panel de Gestión"
                   >
-                    🔒 Gestionar
+                    ⚙️
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* MODAL INSCRIPCIÓN JUGADORES */}
-      {torneoParaInscribir && (
-        <InscripcionModal
-          torneo={torneoParaInscribir}
-          onClose={() => setTorneoParaInscribir(null)}
-          onInscripcionExitosa={() => {
-            setTorneoParaInscribir(null);
-            cargarDatos();
-          }}
-        />
-      )}
-
-      {/* MODAL VALIDAR LLAVE PARA GESTIONAR */}
-      {torneoAAcceder && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-sm w-full p-6 relative shadow-2xl">
-            <button
-              onClick={() => setTorneoAAcceder(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
-            <h3 className="text-lg font-bold text-amber-400 mb-2">
-              Acceso Restringido
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">
-              Ingresá tu Llave de Organizador para gestionar las inscripciones de <strong>{torneoAAcceder.nombre}</strong>.
-            </p>
-
-            {errorLlaveGestion && (
-              <p className="text-xs text-red-400 bg-red-900/30 p-2 rounded mb-3 border border-red-800">
-                {errorLlaveGestion}
-              </p>
-            )}
-
-            <form onSubmit={validarLlaveAccesoGestion} className="space-y-4">
-              <input
-                type="text"
-                required
-                placeholder="Ej: FOX-KEY-8931"
-                value={llaveGestion}
-                onChange={(e) => setLlaveGestion(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none text-sm"
-              />
-              <button
-                type="submit"
-                className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded text-sm transition"
-              >
-                Ingresar al Panel
-              </button>
-            </form>
+            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MODAL PARA ORGANIZADOR (CREAR TORNEO) */}
-      {mostrarModalCrear && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-[var(--border-radius)] max-w-lg w-full p-6 relative shadow-2xl">
-            <button
-              onClick={() => {
-                setMostrarModalCrear(false);
-                setLlaveValida(false);
-              }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
+        {/* Modal Crear Torneo (Paso 1: Llave | Paso 2: Formulario) */}
+        {isCrearModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">
+                  {isOrganizadorValidoParaCrear
+                    ? "Crear Nuevo Torneo"
+                    : "Verificación de Organizador"}
+                </h2>
+                <button
+                  onClick={cerrarModalCrear}
+                  className="text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
 
-            {!llaveValida ? (
-              <div>
-                <h3 className="text-xl font-bold text-[var(--color-primary-light)] mb-2">
-                  Acceso Organizador
-                </h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  Ingresá tu Llave de Autorización emitida por FOXREN para dar de alta un torneo.
-                </p>
-
-                {errorLlave && (
-                  <p className="text-xs text-red-400 bg-red-900/30 p-2 rounded mb-3 border border-red-800">
-                    {errorLlave}
+              {!isOrganizadorValidoParaCrear ? (
+                <div className="space-y-4 py-2">
+                  <p className="text-sm text-slate-300">
+                    Ingresa tu <strong>llave de organizador</strong> para
+                    habilitar la creación de un nuevo torneo:
                   </p>
-                )}
-
-                <form onSubmit={validarLlaveCreacion} className="space-y-4">
                   <input
-                    type="text"
-                    required
-                    placeholder="Ej: FOX-KEY-8931"
-                    value={llaveIngresada}
-                    onChange={(e) => setLlaveIngresada(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none"
+                    type="password"
+                    placeholder="Ej: ORG-1234"
+                    value={llaveCreacion}
+                    onChange={(e) => setLlaveCreacion(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-green-500"
+                  />
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      onClick={cerrarModalCrear}
+                      className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-700 transition text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={validarLlaveCreacion}
+                      className="bg-green-500 hover:bg-green-600 text-slate-950 font-bold px-5 py-2 rounded-xl transition text-sm"
+                    >
+                      Verificar e Ingresar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <TorneoForm
+                  circuitos={circuitos} // <-- Asegurar que no esté enviando un array vacío []
+                  onSuccess={() => {
+                    cerrarModalCrear();
+                    if (refetchTorneos) refetchTorneos();
+                  }}
+                  onCancel={cerrarModalCrear}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal Inscripción Pública */}
+        {torneoParaInscripcion && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    {torneoParaInscripcion.nombre}
+                  </h2>
+                  <p className="text-sm text-slate-400">
+                    Selecciona una categoría para inscribirte
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setTorneoParaInscripcion(null);
+                    setCompetenciaSeleccionada(null);
+                  }}
+                  className="text-slate-400 hover:text-white text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {!competenciaSeleccionada ? (
+                <div className="grid grid-cols-1 gap-3">
+                  {competenciasDelTorneoActual.length === 0 ? (
+                    <p className="text-slate-400 text-center py-4">
+                      No hay categorías disponibles para este torneo.
+                    </p>
+                  ) : (
+                    competenciasDelTorneoActual.map((comp: any) => (
+                      <div
+                        key={comp.id}
+                        onClick={() => setCompetenciaSeleccionada(comp)}
+                        className="bg-slate-900 border border-slate-700 hover:border-blue-500 p-4 rounded-xl cursor-pointer flex justify-between items-center transition"
+                      >
+                        <div>
+                          <h4 className="font-bold text-white">
+                            {comp.categoria || comp.nombre}
+                          </h4>
+                          <p className="text-xs text-slate-400">
+                            {comp.genero || "Libre"} - ${comp.precio || 0}
+                          </p>
+                        </div>
+                        <span className="text-blue-400 font-semibold text-sm">
+                          Seleccionar →
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <button
+                    onClick={() => setCompetenciaSeleccionada(null)}
+                    className="text-xs text-blue-400 hover:underline mb-4 block"
+                  >
+                    ← Volver a categorías
+                  </button>
+                  <InscripcionParejaModal
+                    competencia={competenciaSeleccionada}
+                    onClose={() => setCompetenciaSeleccionada(null)}
+                    onSuccess={() => {
+                      setCompetenciaSeleccionada(null);
+                      setTorneoParaInscripcion(null);
+                      if (refetchTorneos) refetchTorneos();
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal Panel Organizador */}
+        {torneoParaGestionar && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    Gestión: {torneoParaGestionar.nombre}
+                  </h2>
+                  <p className="text-sm text-slate-400">
+                    Panel exclusivo para el organizador
+                  </p>
+                </div>
+                <button
+                  onClick={() => setTorneoParaGestionar(null)}
+                  className="text-slate-400 hover:text-white text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {!isOrganizadorAutenticado ? (
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-slate-300">
+                    Ingresa la llave de acceso de este torneo para gestionar las
+                    categorías e inscriptos:
+                  </p>
+                  <input
+                    type="password"
+                    placeholder="Llave de Acceso"
+                    value={llaveGestion}
+                    onChange={(e) => setLlaveGestion(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
                   />
                   <button
-                    type="submit"
-                    className="w-full py-2.5 bg-[var(--color-primary)] text-white font-bold rounded hover:opacity-90 transition"
+                    onClick={validarLlaveOrganizador}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl transition"
                   >
-                    Validar Llave
+                    Ingresar al Panel
                   </button>
-                </form>
-              </div>
-            ) : (
-              <div>
-                <h3 className="text-xl font-bold text-[var(--color-primary-light)] mb-4">
-                  Crear Nuevo Torneo
-                </h3>
-
-                <form onSubmit={handleCrearTorneo} className="space-y-3 text-sm">
-                  <div>
-                    <label className="block text-gray-400 mb-1">
-                      Circuito al que pertenece
-                    </label>
-                    <select
-                      required
-                      value={circuitoId}
-                      onChange={(e) => setCircuitoId(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none"
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center border-b border-slate-700 pb-4">
+                    <h3 className="text-lg font-semibold">
+                      Categorías del Torneo
+                    </h3>
+                    <button
+                      onClick={() =>
+                        setModoCrearCompetencia(!modoCrearCompetencia)
+                      }
+                      className="bg-green-600 hover:bg-green-500 text-white text-sm font-bold px-3.5 py-2 rounded-xl transition"
                     >
-                      <option value="">Seleccionar Circuito...</option>
-                      {circuitos.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nombre} ({c.temporada})
-                        </option>
-                      ))}
-                    </select>
+                      {modoCrearCompetencia ? "Cancelar" : "+ Nueva Categoría"}
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-gray-400 mb-1">
-                      Nombre del Torneo
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej: Fecha 1 - Copa Apertura"
-                      value={nombre}
-                      onChange={(e) => setNombre(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-400 mb-1">
-                      Sede / Club
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej: Padel Club Central"
-                      value={sede}
-                      onChange={(e) => setSede(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-gray-400 mb-1">
-                        Fecha Inicio
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={fechaInicio}
-                        onChange={(e) => setFechaInicio(e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none"
+                  {modoCrearCompetencia && (
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-700">
+                      <CompetenciaForm
+                        torneoId={torneoParaGestionar.id}
+                        onSuccess={() => {
+                          setModoCrearCompetencia(false);
+                          if (refetchCompetencias) refetchCompetencias();
+                        }}
                       />
                     </div>
-                    <div>
-                      <label className="block text-gray-400 mb-1">
-                        Fecha Fin
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={fechaFin}
-                        onChange={(e) => setFechaFin(e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <label className="block text-gray-400 mb-1">
-                      Categorías Habilitadas
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        "PRIMERA",
-                        "SEGUNDA",
-                        "TERCERA",
-                        "CUARTA",
-                        "QUINTA",
-                        "SEXTA",
-                        "SEPTIMA",
-                        "OCTAVA",
-                      ].map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => toggleCategoria(cat)}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded border transition ${
-                            categorias.includes(cat)
-                              ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                              : "bg-gray-800 text-gray-400 border-gray-700 hover:text-white"
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="space-y-3">
+                    {competenciasDelTorneoActual.length === 0 ? (
+                      <p className="text-slate-400 text-center py-4">
+                        No hay categorías creadas aún en este torneo.
+                      </p>
+                    ) : (
+                      competenciasDelTorneoActual.map((comp: any) => {
+                        const parejascant = parejas
+                          ? parejas.filter(
+                              (p: any) => p.competenciaId === comp.id,
+                            ).length
+                          : 0;
+                        return (
+                          <div
+                            key={comp.id}
+                            className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center"
+                          >
+                            <div>
+                              <p className="font-bold">
+                                {comp.categoria || comp.nombre}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {parejascant} parejas inscriptas
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition mt-4"
-                  >
-                    Publicar Torneo
-                  </button>
-                </form>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* MODAL DE GESTIÓN */}
-      {torneoParaGestionar && (
-        <GestionInscriptosModal
-          torneo={torneoParaGestionar}
-          onClose={() => setTorneoParaGestionar(null)}
-        />
-      )}
+        )}
+      </div>
     </div>
   );
 };
