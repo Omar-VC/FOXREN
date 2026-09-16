@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, getDocs } from "firebase/firestore";
 import { db } from "../../../infrastructure/firebase/firebase";
 
 // Hooks
@@ -51,52 +51,53 @@ export const TorneosPage: React.FC = () => {
 
   // Cargar circuitos desde Firestore al montar la página
   useEffect(() => {
-    const fetchCircuitos = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "circuitos"));
+    const unsubscribe = onSnapshot(
+      collection(db, "circuitos"),
+      (querySnapshot) => {
         const lista: any[] = [];
         querySnapshot.forEach((doc) => {
           lista.push({ id: doc.id, ...doc.data() });
         });
         setCircuitos(lista);
-      } catch (err) {
-        console.error("Error al cargar circuitos:", err);
+      },
+      (err) => {
+        console.error("Error al escuchar circuitos en tiempo real:", err);
       }
-    };
-    fetchCircuitos();
+    );
+
+    // Limpiar la suscripción cuando el componente se desmonte
+    return () => unsubscribe();
   }, []);
 
   // Validar Llave antes de permitir crear torneo
   const validarLlaveCreacion = async () => {
-    if (!llaveCreacion.trim()) {
+    const llaveLimpia = llaveCreacion.trim();
+    if (!llaveLimpia) {
       alert("Por favor ingresa tu llave de organizador.");
       return;
     }
 
+    // Actualizamos el estado para garantizar que viaje limpia sin espacios extra
+    setLlaveCreacion(llaveLimpia);
+
     try {
-      // Busca la llave en la colección de organizadores / llaves
       const querySnapshot = await getDocs(collection(db, "organizadores"));
       let encontrada = false;
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (
-          data.llave === llaveCreacion.trim() ||
-          data.llaveAcceso === llaveCreacion.trim()
-        ) {
+        if (data.llave === llaveLimpia || data.llaveAcceso === llaveLimpia) {
           encontrada = true;
         }
       });
 
-      if (encontrada || llaveCreacion.trim().length >= 4) {
-        // Permite continuar si la llave coincide
+      if (encontrada || llaveLimpia.length >= 4) {
         setIsOrganizadorValidoParaCrear(true);
       } else {
         alert("Llave de organizador no válida o no encontrada.");
       }
     } catch (error) {
       console.error("Error al validar la llave:", error);
-      // Respaldo en caso de fallo de red
       setIsOrganizadorValidoParaCrear(true);
     }
   };
@@ -286,7 +287,8 @@ export const TorneosPage: React.FC = () => {
                 </div>
               ) : (
                 <TorneoForm
-                  circuitos={circuitos} // <-- Asegurar que no esté enviando un array vacío []
+                  circuitos={circuitos}
+                  organizadorLlaveId={llaveCreacion} // <-- USAR llaveCreacion EN LUGAR DE llaveGestion
                   onSuccess={() => {
                     cerrarModalCrear();
                     if (refetchTorneos) refetchTorneos();

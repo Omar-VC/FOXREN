@@ -39,6 +39,12 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
       return;
     }
 
+    // Validación opcional de seguridad
+    if (!organizadorLlaveId) {
+      setErrores(["No se detectó una llave de organizador válida."]);
+      return;
+    }
+
     try {
       setCargando(true);
       const id = await torneosRepository.crearTorneo({
@@ -49,7 +55,7 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
         fechaFin: new Date(fechaFin),
         categoriasValidas: [],
         estado: "PENDIENTE_APROBACION",
-        organizadorLlaveId,
+        organizadorLlaveId, // Ahora llegará con el valor real
       });
 
       setTorneoCreadoId(id);
