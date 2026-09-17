@@ -1,233 +1,231 @@
-// src/features/torneos/components/TorneoForm.tsx
-
 import React, { useState } from "react";
-import { torneosRepository } from "../../../infrastructure/repositories/torneosRepository";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../../../infrastructure/firebase/firebase";
 import { CompetenciaForm } from "../../competencias/components/CompetenciaForm";
-import type { Circuito } from "../../../domain/circuito/circuito.types";
 
 interface TorneoFormProps {
-  circuitos: Circuito[];
-  organizadorLlaveId?: string;
-  onSuccess?: () => void;
-  onCancel?: () => void;
+  circuitos: any[];
+  organizadorLlaveId: string;
+  onSuccess: () => void;
+  onCancel: () => void;
 }
 
 export const TorneoForm: React.FC<TorneoFormProps> = ({
   circuitos,
-  organizadorLlaveId = "",
+  organizadorLlaveId,
   onSuccess,
   onCancel,
 }) => {
-  const [circuitoId, setCircuitoId] = useState("");
+  // Datos del Torneo
   const [nombre, setNombre] = useState("");
+  const [circuitoId, setCircuitoId] = useState("");
   const [sede, setSede] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+  const [premios, setPremios] = useState("");
+  const [aliasPago, setAliasPago] = useState("");
+  const [cbuPago, setCbuPago] = useState("");
+  const [titularCuenta, setTitularCuenta] = useState("");
 
+  // Estados de Control
+  const [loading, setLoading] = useState(false);
   const [torneoCreadoId, setTorneoCreadoId] = useState<string | null>(null);
-  const [mostrandoFormCompetencia, setMostrandoFormCompetencia] =
-    useState(false);
-  const [errores, setErrores] = useState<string[]>([]);
-  const [cargando, setCargando] = useState(false);
+  const [categoriasCreadasCount, setCategoriasCreadasCount] = useState(0);
 
-  const handleCrearTorneo = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrores([]);
-
-    if (!circuitoId) {
-      setErrores(["Debes seleccionar un circuito válido."]);
+    if (!nombre.trim() || !sede.trim()) {
+      alert("Completa el nombre y la sede del torneo.");
       return;
     }
 
-    // Validación opcional de seguridad
-    if (!organizadorLlaveId) {
-      setErrores(["No se detectó una llave de organizador válida."]);
-      return;
-    }
-
+    setLoading(true);
     try {
-      setCargando(true);
-      const id = await torneosRepository.crearTorneo({
-        circuitoId,
-        nombre,
-        sede,
-        fechaInicio: new Date(fechaInicio),
-        fechaFin: new Date(fechaFin),
-        categoriasValidas: [],
-        estado: "PENDIENTE_APROBACION",
-        organizadorLlaveId, // Ahora llegará con el valor real
+      // 1. Guardar con estado PENDIENTE_APROBACION
+      const docRef = await addDoc(collection(db, "torneos"), {
+        nombre: nombre.trim(),
+        circuitoId: circuitoId || null,
+        sede: sede.trim(),
+        fechaInicio: fechaInicio ? new Date(fechaInicio) : serverTimestamp(),
+        premios: premios.trim() || "A confirmar",
+        datosPago: {
+          alias: aliasPago.trim(),
+          cbu: cbuPago.trim(),
+          titular: titularCuenta.trim(),
+        },
+        organizadorLlaveId,
+        estado: "PENDIENTE_APROBACION", // 🔑 Pasa por tu aprobación como Super Admin
+        fechaCreacion: serverTimestamp(),
       });
 
-      setTorneoCreadoId(id);
-      alert(
-        "¡Torneo registrado correctamente! Ahora puedes agregar las categorías/competencias.",
-      );
+      // 2. Transicionar a la carga de categorías
+      setTorneoCreadoId(docRef.id);
     } catch (error) {
       console.error("Error al crear el torneo:", error);
-      setErrores([
-        "Ocurrió un error al guardar el torneo en la base de datos.",
-      ]);
+      alert("Error al guardar el torneo.");
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 p-6 rounded-[var(--border-radius)] shadow-[var(--shadow-card)] max-w-2xl mx-auto space-y-6">
+    <div className="text-white">
       {!torneoCreadoId ? (
-        <form onSubmit={handleCrearTorneo} className="space-y-4">
-          <h2 className="text-xl font-bold text-[var(--color-primary-light)] border-b border-gray-800 pb-2">
-            1. Registrar Nuevo Torneo
-          </h2>
+        /* PASO 1: CREAR DATOS GENERALES DEL TORNEO */
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Nombre del Torneo</label>
+            <input
+              type="text"
+              required
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej: Torneo Aniversario Padel Club"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white"
+            />
+          </div>
 
-          {errores.length > 0 && (
-            <div className="bg-red-900/40 border border-red-500 text-red-200 text-sm p-3 rounded">
-              {errores.map((err, idx) => (
-                <p key={idx}>• {err}</p>
-              ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Sede / Club</label>
+              <input
+                type="text"
+                required
+                value={sede}
+                onChange={(e) => setSede(e.target.value)}
+                placeholder="Ej: Central Padel"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white"
+              />
             </div>
-          )}
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Fecha de Inicio</label>
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white"
+              />
+            </div>
+          </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Circuito
-            </label>
+            <label className="block text-xs text-slate-400 mb-1">Circuito / Serie (Opcional)</label>
             <select
               value={circuitoId}
               onChange={(e) => setCircuitoId(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white"
             >
-              <option value="">-- Seleccionar Circuito --</option>
-              {circuitos && circuitos.length > 0 ? (
-                circuitos.map((circuito: any) => (
-                  <option key={circuito.id} value={circuito.id}>
-                    {circuito.nombre}
-                  </option>
-                ))
-              ) : (
-                <option value="" disabled>
-                  No hay circuitos creados
-                </option>
-              )}
+              <option value="">Sin Circuito Asociado</option>
+              {circuitos.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">
-              Nombre del Torneo
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ej: Fecha 1 - Copa Apertura"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
+            <label className="block text-xs text-slate-400 mb-1">Detalle de Premios por Categoría</label>
+            <textarea
+              rows={3}
+              value={premios}
+              onChange={(e) => setPremios(e.target.value)}
+              placeholder="Ej: 8va Masc: $800.000 a repartir / 7ma Fem: Trofeos + Indumentaria de sponsors"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white resize-none"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">
-              Sede / Club
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ej: Padel Club Central"
-              value={sede}
-              onChange={(e) => setSede(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
-            />
-          </div>
+          <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700/60 space-y-3">
+            <h4 className="text-xs font-bold text-green-400 uppercase tracking-wider">
+              Datos de Cobro (Mercado Pago / Transferencia)
+            </h4>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Alias Mercado Pago</label>
+                <input
+                  type="text"
+                  value={aliasPago}
+                  onChange={(e) => setAliasPago(e.target.value)}
+                  placeholder="Ej: TORNEOS.PADEL.MP"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white"
+                />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">
-                Fecha Inicio
-              </label>
-              <input
-                type="date"
-                required
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
-              />
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">CBU / CVU</label>
+                <input
+                  type="text"
+                  value={cbuPago}
+                  onChange={(e) => setCbuPago(e.target.value)}
+                  placeholder="Ej: 0000003100012345678901"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">
-                Fecha Fin
-              </label>
+              <label className="block text-xs text-slate-400 mb-1">Titular de la Cuenta</label>
               <input
-                type="date"
-                required
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none"
+                type="text"
+                value={titularCuenta}
+                onChange={(e) => setTitularCuenta(e.target.value)}
+                placeholder="Ej: Juan Pérez"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
-            {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold transition"
-              >
-                Cancelar
-              </button>
-            )}
+          <div className="flex justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800 text-sm"
+            >
+              Cancelar
+            </button>
             <button
               type="submit"
-              disabled={cargando}
-              className="px-5 py-2 rounded bg-green-600 hover:bg-green-500 text-white text-sm font-bold transition shadow"
+              disabled={loading}
+              className="bg-green-500 hover:bg-green-600 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition"
             >
-              {cargando ? "Guardando..." : "Crear y Añadir Categorías"}
+              {loading ? "Creando Torneo..." : "Continuar a Cargar Categorías ➔"}
             </button>
           </div>
         </form>
       ) : (
-        <div className="space-y-6">
-          <div className="bg-gray-800/80 border border-gray-700 p-4 rounded text-sm text-gray-300 space-y-1">
-            <p className="font-bold text-white text-base">Torneo: {nombre}</p>
-            <p>Sede: {sede}</p>
-            <p className="text-xs text-green-400">
-              ✓ Guardado en base de datos
+        /* PASO 2: AGREGAR CATEGORÍAS AL TORNEO RECIÉN CREADO */
+        <div className="space-y-5">
+          <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-xl">
+            <h3 className="text-sm font-bold text-green-400">
+              ¡Torneo creado exitosamente!
+            </h3>
+            <p className="text-xs text-slate-300 mt-1">
+              Quedó registrado en estado <strong>PENDIENTE DE APROBACIÓN</strong>. Ahora agrega las categorías que competirán.
             </p>
           </div>
 
-          {!mostrandoFormCompetencia ? (
-            <div className="text-center py-6 space-y-4">
-              <p className="text-sm text-gray-400">
-                Añade las categorías que competirán en este torneo (ej. 4ta,
-                5ta, Suma 11).
-              </p>
-              <button
-                type="button"
-                onClick={() => setMostrandoFormCompetencia(true)}
-                className="px-5 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-sm font-bold rounded shadow transition"
-              >
-                + Cargar Nueva Categoría
-              </button>
-            </div>
-          ) : (
+          <div className="bg-slate-900 p-4 rounded-xl border border-slate-700">
+            <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">
+              Agregar Categoría (#{categoriasCreadasCount + 1})
+            </h4>
             <CompetenciaForm
               torneoId={torneoCreadoId}
-              onSuccess={() => setMostrandoFormCompetencia(false)}
-              onCancel={() => setMostrandoFormCompetencia(false)}
+              onSuccess={() => {
+                setCategoriasCreadasCount((prev) => prev + 1);
+                alert("Categoría agregada. Puedes agregar otra o finalizar.");
+              }}
             />
-          )}
+          </div>
 
-          <div className="flex justify-end pt-4 border-t border-gray-800">
+          <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+            <span className="text-xs text-slate-400">
+              Categorías agregadas en esta sesión: <strong>{categoriasCreadasCount}</strong>
+            </span>
             <button
               type="button"
-              onClick={() => {
-                if (onSuccess) onSuccess();
-              }}
-              className="px-5 py-2 rounded bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold transition"
+              onClick={onSuccess}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2 rounded-xl text-sm transition"
             >
-              Finalizar Gestión de Torneo
+              Finalizar Carga del Torneo
             </button>
           </div>
         </div>

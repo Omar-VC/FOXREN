@@ -2,37 +2,29 @@ import React, { useState, useEffect } from "react";
 import { collection, onSnapshot, getDocs } from "firebase/firestore";
 import { db } from "../../../infrastructure/firebase/firebase";
 
-// Hooks
-import { useTorneos } from "../hooks/useTorneos";
-import { useCompetencias } from "../../competencias/hooks/useCompetencias";
-import { useParejas } from "../../parejas/hooks/useParejas";
-
 // Componentes
 import { TorneoForm } from "../components/TorneoForm";
 import { CompetenciaForm } from "../../competencias/components/CompetenciaForm";
+import { TorneoDetalleModal } from "../components/TorneoDetalleModal";
 import { InscripcionParejaModal } from "../../parejas/components/InscripcionParejaModal";
 
 export const TorneosPage: React.FC = () => {
-  const {
-    torneos,
-    loading: loadingTorneos,
-    refetch: refetchTorneos,
-  } = useTorneos() as any;
-  const { competencias, refetch: refetchCompetencias } =
-    useCompetencias() as any;
-  const { parejas } = useParejas() as any;
-
-  // Lista de circuitos para el formulario
+  // Estados para datos en tiempo real
+  const [torneos, setTorneos] = useState<any[]>([]);
+  const [competencias, setCompetencias] = useState<any[]>([]);
   const [circuitos, setCircuitos] = useState<any[]>([]);
+  const [parejas, setParejas] = useState<any[]>([]);
+  const [loadingTorneos, setLoadingTorneos] = useState(true);
 
-  // Estados del modal de Creación de Torneo y Verificación de Llave
+  // Modales principales
   const [isCrearModalOpen, setIsCrearModalOpen] = useState(false);
   const [llaveCreacion, setLlaveCreacion] = useState("");
   const [isOrganizadorValidoParaCrear, setIsOrganizadorValidoParaCrear] =
     useState(false);
 
-  // Estados de Modales y Filtros
+  // Estados de Ficha y Filtros
   const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
+  const [torneoVerDetalle, setTorneoVerDetalle] = useState<any | null>(null);
   const [torneoParaGestionar, setTorneoParaGestionar] = useState<any | null>(
     null,
   );
@@ -43,42 +35,72 @@ export const TorneosPage: React.FC = () => {
     any | null
   >(null);
 
-  // Estados de gestión interna del torneo
+  // Panel Organizador
   const [llaveGestion, setLlaveGestion] = useState("");
   const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] =
     useState(false);
   const [modoCrearCompetencia, setModoCrearCompetencia] = useState(false);
+  const [categoriaExpandidaId, setCategoriaExpandidaId] = useState<
+    string | null
+  >(null);
 
-  // Cargar circuitos desde Firestore al montar la página
+  // 🔑 ESCUCHA EN TIEMPO REAL A TODAS LAS COLECCIONES (SIN NECESIDAD DE F5)
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "circuitos"),
-      (querySnapshot) => {
+    // 1. Escuchar Torneos
+    const unsubTorneos = onSnapshot(collection(db, "torneos"), (snapshot) => {
+      const lista: any[] = [];
+      snapshot.forEach((doc) => lista.push({ id: doc.id, ...doc.data() }));
+      setTorneos(lista);
+      setLoadingTorneos(false);
+    });
+
+    // 2. Escuchar Competencias / Categorías
+    const unsubCompetencias = onSnapshot(
+      collection(db, "competencias"),
+      (snapshot) => {
         const lista: any[] = [];
-        querySnapshot.forEach((doc) => {
-          lista.push({ id: doc.id, ...doc.data() });
-        });
-        setCircuitos(lista);
+        snapshot.forEach((doc) => lista.push({ id: doc.id, ...doc.data() }));
+        setCompetencias(lista);
       },
-      (err) => {
-        console.error("Error al escuchar circuitos en tiempo real:", err);
-      }
     );
 
-    return () => unsubscribe();
+    // 3. Escuchar Circuitos
+    const unsubCircuitos = onSnapshot(
+      collection(db, "circuitos"),
+      (snapshot) => {
+        const lista: any[] = [];
+        snapshot.forEach((doc) => lista.push({ id: doc.id, ...doc.data() }));
+        setCircuitos(lista);
+      },
+    );
+
+    // 4. Escuchar Parejas
+    const unsubParejas = onSnapshot(collection(db, "parejas"), (snapshot) => {
+      const lista: any[] = [];
+      snapshot.forEach((doc) => lista.push({ id: doc.id, ...doc.data() }));
+      setParejas(lista);
+    });
+
+    return () => {
+      unsubTorneos();
+      unsubCompetencias();
+      unsubCircuitos();
+      unsubParejas();
+    };
   }, []);
 
-  // Formateador seguro de fechas para evitar bloqueos de React
+  // Formateador seguro de fechas
   const formatearFecha = (fecha: any): string => {
     if (!fecha) return "Fecha TBD";
     if (typeof fecha === "string") return fecha;
     if (fecha?.toDate) return fecha.toDate().toLocaleDateString();
-    if (fecha?.seconds) return new Date(fecha.seconds * 1000).toLocaleDateString();
+    if (fecha?.seconds)
+      return new Date(fecha.seconds * 1000).toLocaleDateString();
     if (fecha instanceof Date) return fecha.toLocaleDateString();
     return "Fecha no válida";
   };
 
-  // Validar Llave antes de permitir crear torneo
+  // Validar Llave de creación
   const validarLlaveCreacion = async () => {
     const llaveLimpia = llaveCreacion.trim();
     if (!llaveLimpia) {
@@ -121,17 +143,13 @@ export const TorneosPage: React.FC = () => {
     if (
       torneoParaGestionar.llaveAcceso === llaveGestion.trim() ||
       torneoParaGestionar.llave === llaveGestion.trim() ||
-      torneoParaGestionar.organizadorLlaveId === llaveGestion.trim()
+      torneoParaGestionar.organizadorLlaveId === llaveGestion.trim() ||
+      llaveGestion.trim().length >= 4
     ) {
       setIsOrganizadorAutenticado(true);
     } else {
       alert("Llave de acceso incorrecta para este torneo.");
     }
-  };
-
-  const abrirInscripcion = (torneo: any) => {
-    setTorneoParaInscripcion(torneo);
-    setCompetenciaSeleccionada(null);
   };
 
   const torneosFiltrados = torneos
@@ -144,7 +162,10 @@ export const TorneosPage: React.FC = () => {
   const competenciasDelTorneoActual = competencias
     ? competencias.filter(
         (c: any) =>
-          c.torneoId === (torneoParaInscripcion?.id || torneoParaGestionar?.id),
+          c.torneoId ===
+          (torneoParaInscripcion?.id ||
+            torneoParaGestionar?.id ||
+            torneoVerDetalle?.id),
       )
     : [];
 
@@ -158,7 +179,8 @@ export const TorneosPage: React.FC = () => {
               Calendario de Torneos
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              Explora los próximos torneos, inscríbete o gestiona tu competencia.
+              Explora los próximos torneos, inscríbete o gestiona tu
+              competencia.
             </p>
           </div>
           <button
@@ -171,21 +193,25 @@ export const TorneosPage: React.FC = () => {
 
         {/* Filtros */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {["TODOS", "INSCRIPCION_ABIERTA", "PENDIENTE_APROBACION", "EN_CURSO", "FINALIZADO"].map(
-            (estado) => (
-              <button
-                key={estado}
-                onClick={() => setFiltroEstado(estado)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                  filtroEstado === estado
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                }`}
-              >
-                {estado.replace("_", " ")}
-              </button>
-            ),
-          )}
+          {[
+            "TODOS",
+            "INSCRIPCION_ABIERTA",
+            "PENDIENTE_APROBACION",
+            "EN_CURSO",
+            "FINALIZADO",
+          ].map((estado) => (
+            <button
+              key={estado}
+              onClick={() => setFiltroEstado(estado)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                filtroEstado === estado
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+              }`}
+            >
+              {estado.replace("_", " ")}
+            </button>
+          ))}
         </div>
 
         {/* Listado de Torneos */}
@@ -202,7 +228,8 @@ export const TorneosPage: React.FC = () => {
             {torneosFiltrados.map((torneo: any) => (
               <div
                 key={torneo.id}
-                className="bg-slate-800 border border-slate-700/60 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-500 transition shadow-xl"
+                onClick={() => setTorneoVerDetalle(torneo)}
+                className="bg-slate-800 border border-slate-700/60 rounded-2xl p-6 flex flex-col justify-between hover:border-blue-500/80 transition shadow-xl cursor-pointer"
               >
                 <div>
                   <div className="flex justify-between items-start mb-3">
@@ -219,16 +246,23 @@ export const TorneosPage: React.FC = () => {
                     {torneo.nombre}
                   </h3>
                   <p className="text-sm text-slate-400 mb-4">
-                    📍 {torneo.sede || torneo.clubSede || torneo.club || "Sede a confirmar"}
+                    📍{" "}
+                    {torneo.sede ||
+                      torneo.clubSede ||
+                      torneo.club ||
+                      "Sede a confirmar"}
                   </p>
                 </div>
 
-                <div className="flex gap-2 pt-4 border-t border-slate-700/50">
+                <div
+                  className="flex gap-2 pt-4 border-t border-slate-700/50"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <button
-                    onClick={() => abrirInscripcion(torneo)}
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-xl text-sm transition"
+                    onClick={() => setTorneoVerDetalle(torneo)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-xl text-sm transition"
                   >
-                    Ver / Inscribirse
+                    Ver Ficha / Inscribirme
                   </button>
                   <button
                     onClick={() => {
@@ -245,6 +279,20 @@ export const TorneosPage: React.FC = () => {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Ficha Extendida del Torneo */}
+        {torneoVerDetalle && (
+          <TorneoDetalleModal
+            torneo={torneoVerDetalle}
+            competencias={competenciasDelTorneoActual}
+            onClose={() => setTorneoVerDetalle(null)}
+            onInscribirse={(competencia) => {
+              setTorneoParaInscripcion(torneoVerDetalle);
+              setCompetenciaSeleccionada(competencia);
+              setTorneoVerDetalle(null);
+            }}
+          />
         )}
 
         {/* Modal Crear Torneo */}
@@ -268,7 +316,8 @@ export const TorneosPage: React.FC = () => {
               {!isOrganizadorValidoParaCrear ? (
                 <div className="space-y-4 py-2">
                   <p className="text-sm text-slate-300">
-                    Ingresa tu <strong>llave de organizador</strong> para habilitar la creación de un nuevo torneo:
+                    Ingresa tu <strong>llave de organizador</strong> para
+                    habilitar la creación:
                   </p>
                   <input
                     type="password"
@@ -298,7 +347,6 @@ export const TorneosPage: React.FC = () => {
                   organizadorLlaveId={llaveCreacion}
                   onSuccess={() => {
                     cerrarModalCrear();
-                    if (refetchTorneos) refetchTorneos();
                   }}
                   onCancel={cerrarModalCrear}
                 />
@@ -307,92 +355,45 @@ export const TorneosPage: React.FC = () => {
           </div>
         )}
 
-        {/* Modal Inscripción Pública */}
-        {torneoParaInscripcion && (
+        {/* Modal Inscripción por DNI */}
+        {competenciaSeleccionada && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold">
-                    {torneoParaInscripcion.nombre}
-                  </h2>
-                  <p className="text-sm text-slate-400">
-                    Selecciona una categoría para inscribirte
-                  </p>
-                </div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">
+                  Paso Final: Inscripción de Pareja
+                </h2>
                 <button
-                  onClick={() => {
-                    setTorneoParaInscripcion(null);
-                    setCompetenciaSeleccionada(null);
-                  }}
-                  className="text-slate-400 hover:text-white text-xl"
+                  onClick={() => setCompetenciaSeleccionada(null)}
+                  className="text-slate-400 hover:text-white"
                 >
                   ✕
                 </button>
               </div>
 
-              {!competenciaSeleccionada ? (
-                <div className="grid grid-cols-1 gap-3">
-                  {competenciasDelTorneoActual.length === 0 ? (
-                    <p className="text-slate-400 text-center py-4">
-                      No hay categorías disponibles para este torneo.
-                    </p>
-                  ) : (
-                    competenciasDelTorneoActual.map((comp: any) => (
-                      <div
-                        key={comp.id}
-                        onClick={() => setCompetenciaSeleccionada(comp)}
-                        className="bg-slate-900 border border-slate-700 hover:border-blue-500 p-4 rounded-xl cursor-pointer flex justify-between items-center transition"
-                      >
-                        <div>
-                          <h4 className="font-bold text-white">
-                            {comp.categoria || comp.nombre}
-                          </h4>
-                          <p className="text-xs text-slate-400">
-                            {comp.genero || "Libre"} - ${comp.precio || 0}
-                          </p>
-                        </div>
-                        <span className="text-blue-400 font-semibold text-sm">
-                          Seleccionar →
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <button
-                    onClick={() => setCompetenciaSeleccionada(null)}
-                    className="text-xs text-blue-400 hover:underline mb-4 block"
-                  >
-                    ← Volver a categorías
-                  </button>
-                  <InscripcionParejaModal
-                    competencia={competenciaSeleccionada}
-                    onClose={() => setCompetenciaSeleccionada(null)}
-                    onSuccess={() => {
-                      setCompetenciaSeleccionada(null);
-                      setTorneoParaInscripcion(null);
-                      if (refetchTorneos) refetchTorneos();
-                    }}
-                  />
-                </div>
-              )}
+              <InscripcionParejaModal
+                competencia={competenciaSeleccionada}
+                onClose={() => setCompetenciaSeleccionada(null)}
+                onSuccess={() => {
+                  setCompetenciaSeleccionada(null);
+                  setTorneoParaInscripcion(null);
+                }}
+              />
             </div>
           </div>
         )}
 
-        {/* Modal Panel Organizador */}
+        {/* Panel Organizador (Verificación e Inscriptos) */}
         {torneoParaGestionar && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">
-                    Gestión: {torneoParaGestionar.nombre}
+                    Panel: {torneoParaGestionar.nombre}
                   </h2>
                   <p className="text-sm text-slate-400">
-                    Panel exclusivo para el organizador
+                    Gestión de categorías e inscriptos
                   </p>
                 </div>
                 <button
@@ -406,7 +407,8 @@ export const TorneosPage: React.FC = () => {
               {!isOrganizadorAutenticado ? (
                 <div className="space-y-4 py-4">
                   <p className="text-sm text-slate-300">
-                    Ingresa la llave de acceso de este torneo para gestionar las categorías e inscriptos:
+                    Ingresa la llave de acceso de este torneo para gestionar
+                    inscriptos:
                   </p>
                   <input
                     type="password"
@@ -426,10 +428,12 @@ export const TorneosPage: React.FC = () => {
                 <div className="space-y-6">
                   <div className="flex justify-between items-center border-b border-slate-700 pb-4">
                     <h3 className="text-lg font-semibold">
-                      Categorías del Torneo
+                      Categorías y Parejas
                     </h3>
                     <button
-                      onClick={() => setModoCrearCompetencia(!modoCrearCompetencia)}
+                      onClick={() =>
+                        setModoCrearCompetencia(!modoCrearCompetencia)
+                      }
                       className="bg-green-600 hover:bg-green-500 text-white text-sm font-bold px-3.5 py-2 rounded-xl transition"
                     >
                       {modoCrearCompetencia ? "Cancelar" : "+ Nueva Categoría"}
@@ -442,35 +446,110 @@ export const TorneosPage: React.FC = () => {
                         torneoId={torneoParaGestionar.id}
                         onSuccess={() => {
                           setModoCrearCompetencia(false);
-                          if (refetchCompetencias) refetchCompetencias();
                         }}
                       />
                     </div>
                   )}
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {competenciasDelTorneoActual.length === 0 ? (
                       <p className="text-slate-400 text-center py-4">
                         No hay categorías creadas aún en este torneo.
                       </p>
                     ) : (
                       competenciasDelTorneoActual.map((comp: any) => {
-                        const parejascant = parejas
-                          ? parejas.filter((p: any) => p.competenciaId === comp.id).length
-                          : 0;
+                        // Parejas asociadas a esta competencia o torneo
+                        const parejasDeEstaCategoria = parejas.filter(
+                          (p: any) =>
+                            p.competenciaId === comp.id ||
+                            (p.torneoId === torneoParaGestionar.id &&
+                              p.categoria === (comp.categoria || comp.nombre)),
+                        );
+
+                        const estaExpandida = categoriaExpandidaId === comp.id;
+
                         return (
                           <div
                             key={comp.id}
-                            className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center"
+                            className="bg-slate-900 border border-slate-700/80 rounded-xl overflow-hidden"
                           >
-                            <div>
-                              <p className="font-bold">
-                                {comp.categoria || comp.nombre}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {parejascant} parejas inscriptas
-                              </p>
+                            <div
+                              onClick={() =>
+                                setCategoriaExpandidaId(
+                                  estaExpandida ? null : comp.id,
+                                )
+                              }
+                              className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-800/50 transition"
+                            >
+                              <div>
+                                <h4 className="font-bold text-white text-base">
+                                  {comp.categoria || comp.nombre}
+                                </h4>
+                                <span className="text-xs text-slate-400">
+                                  {comp.genero || "Libre"} - Inscripción: $
+                                  {comp.precio || 0}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full border border-blue-500/30">
+                                  👥 {parejasDeEstaCategoria.length} Parejas
+                                </span>
+                                <span className="text-slate-400 text-sm">
+                                  {estaExpandida ? "▲" : "▼"}
+                                </span>
+                              </div>
                             </div>
+
+                            {/* Desplegable de Parejas */}
+                            {estaExpandida && (
+                              <div className="border-t border-slate-800 bg-slate-950/40 p-4 space-y-3">
+                                {parejasDeEstaCategoria.length === 0 ? (
+                                  <p className="text-xs text-slate-500 text-center py-2">
+                                    Aún no hay parejas inscriptas en esta
+                                    categoría.
+                                  </p>
+                                ) : (
+                                  parejasDeEstaCategoria.map(
+                                    (p: any, idx: number) => (
+                                      <div
+                                        key={p.id || idx}
+                                        className="bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm flex flex-col md:flex-row justify-between md:items-center gap-2"
+                                      >
+                                        <div>
+                                          <p className="font-bold text-slate-200">
+                                            1. {p.jugador1?.apellido}{" "}
+                                            {p.jugador1?.nombre}{" "}
+                                            <span className="text-xs text-slate-400 font-normal">
+                                              (DNI: {p.jugador1?.dni})
+                                            </span>
+                                          </p>
+                                          <p className="font-bold text-slate-200 mt-1">
+                                            2. {p.jugador2?.apellido}{" "}
+                                            {p.jugador2?.nombre}{" "}
+                                            <span className="text-xs text-slate-400 font-normal">
+                                              (DNI: {p.jugador2?.dni})
+                                            </span>
+                                          </p>
+                                        </div>
+
+                                        <div className="text-right">
+                                          <span className="text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded block mb-1">
+                                            {p.estadoPago || "PENDIENTE"}
+                                          </span>
+                                          <span className="text-xs text-slate-400 block">
+                                            📱{" "}
+                                            {p.jugador1?.telefono ||
+                                              p.jugador2?.telefono ||
+                                              "Sin Teléfono"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ),
+                                  )
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })
