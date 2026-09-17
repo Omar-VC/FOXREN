@@ -65,9 +65,18 @@ export const TorneosPage: React.FC = () => {
       }
     );
 
-    // Limpiar la suscripción cuando el componente se desmonte
     return () => unsubscribe();
   }, []);
+
+  // Formateador seguro de fechas para evitar bloqueos de React
+  const formatearFecha = (fecha: any): string => {
+    if (!fecha) return "Fecha TBD";
+    if (typeof fecha === "string") return fecha;
+    if (fecha?.toDate) return fecha.toDate().toLocaleDateString();
+    if (fecha?.seconds) return new Date(fecha.seconds * 1000).toLocaleDateString();
+    if (fecha instanceof Date) return fecha.toLocaleDateString();
+    return "Fecha no válida";
+  };
 
   // Validar Llave antes de permitir crear torneo
   const validarLlaveCreacion = async () => {
@@ -77,7 +86,6 @@ export const TorneosPage: React.FC = () => {
       return;
     }
 
-    // Actualizamos el estado para garantizar que viaje limpia sin espacios extra
     setLlaveCreacion(llaveLimpia);
 
     try {
@@ -112,7 +120,8 @@ export const TorneosPage: React.FC = () => {
     if (!torneoParaGestionar) return;
     if (
       torneoParaGestionar.llaveAcceso === llaveGestion.trim() ||
-      torneoParaGestionar.llave === llaveGestion.trim()
+      torneoParaGestionar.llave === llaveGestion.trim() ||
+      torneoParaGestionar.organizadorLlaveId === llaveGestion.trim()
     ) {
       setIsOrganizadorAutenticado(true);
     } else {
@@ -149,8 +158,7 @@ export const TorneosPage: React.FC = () => {
               Calendario de Torneos
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              Explora los próximos torneos, inscríbete o gestiona tu
-              competencia.
+              Explora los próximos torneos, inscríbete o gestiona tu competencia.
             </p>
           </div>
           <button
@@ -163,7 +171,7 @@ export const TorneosPage: React.FC = () => {
 
         {/* Filtros */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {["TODOS", "INSCRIPCION_ABIERTA", "EN_CURSO", "FINALIZADO"].map(
+          {["TODOS", "INSCRIPCION_ABIERTA", "PENDIENTE_APROBACION", "EN_CURSO", "FINALIZADO"].map(
             (estado) => (
               <button
                 key={estado}
@@ -204,14 +212,14 @@ export const TorneosPage: React.FC = () => {
                         : "ACTIVO"}
                     </span>
                     <span className="text-xs text-slate-400">
-                      {torneo.fechaInicio || torneo.fecha}
+                      {formatearFecha(torneo.fechaInicio || torneo.fecha)}
                     </span>
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">
                     {torneo.nombre}
                   </h3>
                   <p className="text-sm text-slate-400 mb-4">
-                    📍 {torneo.clubSede || torneo.club || "Sede a confirmar"}
+                    📍 {torneo.sede || torneo.clubSede || torneo.club || "Sede a confirmar"}
                   </p>
                 </div>
 
@@ -239,10 +247,10 @@ export const TorneosPage: React.FC = () => {
           </div>
         )}
 
-        {/* Modal Crear Torneo (Paso 1: Llave | Paso 2: Formulario) */}
+        {/* Modal Crear Torneo */}
         {isCrearModalOpen && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">
                   {isOrganizadorValidoParaCrear
@@ -260,8 +268,7 @@ export const TorneosPage: React.FC = () => {
               {!isOrganizadorValidoParaCrear ? (
                 <div className="space-y-4 py-2">
                   <p className="text-sm text-slate-300">
-                    Ingresa tu <strong>llave de organizador</strong> para
-                    habilitar la creación de un nuevo torneo:
+                    Ingresa tu <strong>llave de organizador</strong> para habilitar la creación de un nuevo torneo:
                   </p>
                   <input
                     type="password"
@@ -288,7 +295,7 @@ export const TorneosPage: React.FC = () => {
               ) : (
                 <TorneoForm
                   circuitos={circuitos}
-                  organizadorLlaveId={llaveCreacion} // <-- USAR llaveCreacion EN LUGAR DE llaveGestion
+                  organizadorLlaveId={llaveCreacion}
                   onSuccess={() => {
                     cerrarModalCrear();
                     if (refetchTorneos) refetchTorneos();
@@ -399,8 +406,7 @@ export const TorneosPage: React.FC = () => {
               {!isOrganizadorAutenticado ? (
                 <div className="space-y-4 py-4">
                   <p className="text-sm text-slate-300">
-                    Ingresa la llave de acceso de este torneo para gestionar las
-                    categorías e inscriptos:
+                    Ingresa la llave de acceso de este torneo para gestionar las categorías e inscriptos:
                   </p>
                   <input
                     type="password"
@@ -423,9 +429,7 @@ export const TorneosPage: React.FC = () => {
                       Categorías del Torneo
                     </h3>
                     <button
-                      onClick={() =>
-                        setModoCrearCompetencia(!modoCrearCompetencia)
-                      }
+                      onClick={() => setModoCrearCompetencia(!modoCrearCompetencia)}
                       className="bg-green-600 hover:bg-green-500 text-white text-sm font-bold px-3.5 py-2 rounded-xl transition"
                     >
                       {modoCrearCompetencia ? "Cancelar" : "+ Nueva Categoría"}
@@ -452,9 +456,7 @@ export const TorneosPage: React.FC = () => {
                     ) : (
                       competenciasDelTorneoActual.map((comp: any) => {
                         const parejascant = parejas
-                          ? parejas.filter(
-                              (p: any) => p.competenciaId === comp.id,
-                            ).length
+                          ? parejas.filter((p: any) => p.competenciaId === comp.id).length
                           : 0;
                         return (
                           <div

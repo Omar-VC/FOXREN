@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../../infrastructure/firebase/firebase';
 
 export const useTorneos = () => {
@@ -7,37 +7,47 @@ export const useTorneos = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTorneos = async () => {
+  useEffect(() => {
     setLoading(true);
     setError(null);
-    try {
-      const torneosRef = collection(db, 'torneos');
-      const q = query(torneosRef, orderBy('creadoEn', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      const lista: any[] = [];
-      querySnapshot.forEach((doc) => {
-        lista.push({ id: doc.id, ...doc.data() });
-      });
 
-      setTorneos(lista);
-    } catch (err: any) {
-      console.error('Error al obtener torneos:', err);
-      setError(err.message || 'Error al cargar torneos');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const torneosRef = collection(db, 'torneos');
+    // Quitamos la restricción estricta de orderBy para asegurar que se muestren todos los documentos
+    const q = query(torneosRef);
 
-  useEffect(() => {
-    fetchTorneos();
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const lista: any[] = [];
+        querySnapshot.forEach((doc) => {
+          lista.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Ordenamos del lado del cliente por fecha de creación (si existe) o por ID
+        lista.sort((a, b) => {
+          const fechaA = a.creadoEn?.seconds || a.fechaInicio?.seconds || 0;
+          const fechaB = b.creadoEn?.seconds || b.fechaInicio?.seconds || 0;
+          return fechaB - fechaA;
+        });
+
+        setTorneos(lista);
+        setLoading(false);
+      },
+      (err: any) => {
+        console.error('Error al escuchar torneos en tiempo real:', err);
+        setError(err.message || 'Error al cargar torneos');
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   return {
     torneos,
     loading,
     error,
-    refetch: fetchTorneos
+    refetch: () => {} // Se mantiene por compatibilidad, pero ya sincroniza en vivo
   };
 };
 
