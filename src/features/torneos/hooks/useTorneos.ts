@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../../infrastructure/firebase/firebase';
+import type { Torneo } from '../../../domain/torneo/torneo.types';
 
 export const useTorneos = () => {
-  const [torneos, setTorneos] = useState<any[]>([]);
+  const [torneos, setTorneos] = useState<Torneo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -12,19 +13,17 @@ export const useTorneos = () => {
     setError(null);
 
     const torneosRef = collection(db, 'torneos');
-    // Quitamos la restricción estricta de orderBy para asegurar que se muestren todos los documentos
     const q = query(torneosRef);
 
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
-        const lista: any[] = [];
+        const lista: Torneo[] = [];
         querySnapshot.forEach((doc) => {
-          lista.push({ id: doc.id, ...doc.data() });
+          lista.push({ id: doc.id, ...doc.data() } as Torneo);
         });
 
-        // Ordenamos del lado del cliente por fecha de creación (si existe) o por ID
-        lista.sort((a, b) => {
+        lista.sort((a: any, b: any) => {
           const fechaA = a.creadoEn?.seconds || a.fechaInicio?.seconds || 0;
           const fechaB = b.creadoEn?.seconds || b.fechaInicio?.seconds || 0;
           return fechaB - fechaA;
@@ -47,7 +46,7 @@ export const useTorneos = () => {
     torneos,
     loading,
     error,
-    refetch: () => {} // Se mantiene por compatibilidad, pero ya sincroniza en vivo
+    refetch: () => {}
   };
 };
 

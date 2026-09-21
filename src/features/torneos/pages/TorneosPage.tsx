@@ -7,7 +7,7 @@ import type { Torneo } from "../../../domain/torneo/torneo.types";
 import { useTorneosRealtime } from "../hooks/useTorneosRealtime";
 
 // Componentes Modularizados
-import { TorneoCard } from "../components/TorneoCard"; // 👈 Nuevo Componente
+import { TorneoCard } from "../components/TorneoCard";
 import { TorneoForm } from "../components/TorneoForm";
 import { TorneoDetalleModal } from "../components/TorneoDetalleModal";
 import { InscripcionParejaModal } from "../../parejas/components/InscripcionParejaModal";
@@ -31,94 +31,89 @@ export const TorneosPage: React.FC = () => {
   } | null>(null);
 
   const [torneoSeleccionado, setTorneoSeleccionado] = useState<Torneo | null>(
-    null,
+    null
   );
   const [competenciaSeleccionada, setCompetenciaSeleccionada] = useState<
     any | null
   >(null);
   const [torneoParaGestionar, setTorneoParaGestionar] = useState<any | null>(
-    null,
+    null
   );
   const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] =
     useState(false);
   const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
 
-  // Validación de Llave: Lee exactamente los campos dniCuit, nombreCompleto y telefono de Firestore
+  // Validación de Llave
   const validarLlaveCreacion = async (llaveIngresada: string) => {
-  const codigoLimpio = llaveIngresada.trim();
+    const codigoLimpio = llaveIngresada.trim();
 
-  if (!codigoLimpio) {
-    alert("Por favor ingresa una llave.");
-    return;
-  }
-
-  try {
-    // 1. Buscar la llave en la colección "llaves_organizadores" por el campo "codigo"
-    const qLlave = query(
-      collection(db, "llaves_organizadores"),
-      where("codigo", "==", codigoLimpio)
-    );
-    const snapLlave = await getDocs(qLlave);
-
-    if (snapLlave.empty) {
-      alert("La llave ingresada no existe.");
+    if (!codigoLimpio) {
+      alert("Por favor ingresa una llave.");
       return;
     }
 
-    // Tomamos la primera coincidencia
-    const llaveDoc = snapLlave.docs[0];
-    const llaveData = llaveDoc.data();
+    try {
+      const qLlave = query(
+        collection(db, "llaves_organizadores"),
+        where("codigo", "==", codigoLimpio)
+      );
+      const snapLlave = await getDocs(qLlave);
 
-    // Validar estado de la llave
-    if (llaveData.estado && llaveData.estado !== "activa") {
-      alert("Esta llave de organizador ya no se encuentra activa.");
-      return;
-    }
-
-    const organizadorId = llaveData.organizadorId;
-    let telefonoOrganizador = "";
-    let nombreOrganizador = llaveData.nombreOrganizador || "";
-
-    // 2. Ir a la colección "organizadores" a buscar el teléfono del organizador usando su organizadorId
-    if (organizadorId) {
-      try {
-        const orgRef = doc(db, "organizadores", organizadorId);
-        const orgSnap = await getDoc(orgRef);
-
-        if (orgSnap.exists()) {
-          const orgData = orgSnap.data();
-          telefonoOrganizador =
-            orgData.telefono ||
-            orgData.celular ||
-            orgData.contacto ||
-            "";
-          
-          if (!nombreOrganizador) {
-            nombreOrganizador = orgData.nombreCompleto || "";
-          }
-        }
-      } catch (errOrg) {
-        console.warn("No se pudieron consultar los detalles extras del organizador:", errOrg);
+      if (snapLlave.empty) {
+        alert("La llave ingresada no existe.");
+        return;
       }
+
+      const llaveDoc = snapLlave.docs[0];
+      const llaveData = llaveDoc.data();
+
+      if (llaveData.estado && llaveData.estado !== "activa") {
+        alert("Esta llave de organizador ya no se encuentra activa.");
+        return;
+      }
+
+      const organizadorId = llaveData.organizadorId;
+      let telefonoOrganizador = "";
+      let nombreOrganizador = llaveData.nombreOrganizador || "";
+
+      if (organizadorId) {
+        try {
+          const orgRef = doc(db, "organizadores", organizadorId);
+          const orgSnap = await getDoc(orgRef);
+
+          if (orgSnap.exists()) {
+            const orgData = orgSnap.data();
+            telefonoOrganizador =
+              orgData.telefono ||
+              orgData.celular ||
+              orgData.contacto ||
+              "";
+
+            if (!nombreOrganizador) {
+              nombreOrganizador = orgData.nombreCompleto || "";
+            }
+          }
+        } catch (errOrg) {
+          console.warn("No se pudieron consultar los detalles extras del organizador:", errOrg);
+        }
+      }
+
+      setLlaveCreacion(codigoLimpio);
+      setOrganizadorLogueado({
+        id: organizadorId || llaveDoc.id,
+        telefono: telefonoOrganizador,
+        nombreCompleto: nombreOrganizador,
+      });
+      setIsOrganizadorValidoParaCrear(true);
+
+    } catch (err) {
+      console.error("Error al validar la llave de organizador:", err);
+      alert("Ocurrió un error al verificar la llave.");
     }
-
-    // 3. Guardar el objeto del organizador validado
-    setLlaveCreacion(codigoLimpio);
-    setOrganizadorLogueado({
-      id: organizadorId || llaveDoc.id,
-      telefono: telefonoOrganizador,
-      nombreCompleto: nombreOrganizador,
-    });
-    setIsOrganizadorValidoParaCrear(true);
-
-  } catch (err) {
-    console.error("Error al validar la llave de organizador:", err);
-    alert("Ocurrió un error al verificar la llave.");
-  }
-};
+  };
 
   const torneosFiltrados = torneos.filter((t) =>
-    filtroEstado === "TODOS" ? true : t.estado === filtroEstado,
+    filtroEstado === "TODOS" ? true : t.estado === filtroEstado
   );
 
   return (
@@ -164,7 +159,7 @@ export const TorneosPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Grid de Torneos usando TorneoCard */}
+      {/* Grid de Torneos */}
       {loading ? (
         <p className="text-center text-slate-500 py-12 text-sm">
           Cargando torneos...
@@ -205,7 +200,7 @@ export const TorneosPage: React.FC = () => {
               circuitos={circuitos}
               organizadorLlaveId={llaveCreacion}
               organizadorId={organizadorLogueado?.id}
-              organizadorContacto={organizadorLogueado?.telefono} // 👈 Se pasa "2994630150"
+              organizadorContacto={organizadorLogueado?.telefono}
               onSuccess={() => {
                 setIsCrearModalOpen(false);
                 setIsOrganizadorValidoParaCrear(false);
@@ -225,28 +220,38 @@ export const TorneosPage: React.FC = () => {
         <TorneoDetalleModal
           torneo={torneoSeleccionado}
           competencias={competencias.filter(
-            (c: any) => c.torneoId === torneoSeleccionado.id,
+            (c: any) => c.torneoId === torneoSeleccionado.id
           )}
           onClose={() => setTorneoSeleccionado(null)}
           onInscribirCompetencia={(comp: any) => {
+            setCompetenciaSeleccionada({
+              ...comp,
+              aliasPago:
+                torneoSeleccionado.datosPago?.alias ||
+                torneoSeleccionado.aliasPago ||
+                torneoSeleccionado.alias,
+              torneoNombre: torneoSeleccionado.nombre,
+            });
             setTorneoSeleccionado(null);
-            setCompetenciaSeleccionada(comp);
           }}
         />
       )}
 
       {competenciaSeleccionada && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="max-w-lg w-full">
-            <InscripcionParejaModal
-              competencia={competenciaSeleccionada}
-              onClose={() => setCompetenciaSeleccionada(null)}
-              onSuccess={() => {
-                setCompetenciaSeleccionada(null);
-              }}
-            />
-          </div>
-        </div>
+        <InscripcionParejaModal
+          competencia={{
+            ...competenciaSeleccionada,
+            aliasPago:
+              competenciaSeleccionada.aliasPago ||
+              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)?.datosPago?.alias ||
+              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)?.aliasPago ||
+              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)?.alias,
+          }}
+          onClose={() => setCompetenciaSeleccionada(null)}
+          onSuccess={() => {
+            setCompetenciaSeleccionada(null);
+          }}
+        />
       )}
 
       {torneoParaGestionar && !isOrganizadorAutenticado && (

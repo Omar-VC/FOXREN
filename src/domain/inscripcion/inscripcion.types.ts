@@ -1,16 +1,19 @@
 export type EstadoInscripcion =
-  | "pendiente"
+  | "PENDIENTE"
+  | "APROBADO"
+  | "RECHAZADO"
+  | "CANCELADA"
   | "confirmada"
+  | "pendiente"
   | "cancelada"
   | "rechazada";
 
 export interface Inscripcion {
   id: string;
-
   competenciaId: string;
   parejaId: string;
-
   estado: EstadoInscripcion;
-
-  fechaInscripcion: Date;
+  fechaInscripcion: Date | any;
+  montoAbonado?: number;
+  comprobanteUrl?: string;
 }

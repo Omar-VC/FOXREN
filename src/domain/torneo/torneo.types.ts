@@ -17,14 +17,16 @@ export interface Torneo {
   fechaInicio?: any;
   fechaFin?: any;
   fechaCreacion?: any;
+  aliasPago?: string;
+  alias?: string;
   datosPago?: {
     alias?: string;
     cbu?: string;
     titular?: string;
   };
   organizadorLlaveId?: string;
-  organizadorId?: string;          // 👈 Soluciona TS2353
-  contactoOrganizador?: string;    // 👈 Soluciona TS2353
+  organizadorId?: string;
+  contactoOrganizador?: string;
   comisionPorcentaje?: number;
   gananciaEstimadaFoxren?: number;
   modalidadPago?: string;
