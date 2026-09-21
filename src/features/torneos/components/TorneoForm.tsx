@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../infrastructure/firebase/firebase";
 import { CompetenciaForm } from "../../competencias/components/CompetenciaForm";
 
+// 1. Interfaz de Props actualizada
 interface TorneoFormProps {
   circuitos: any[];
   organizadorLlaveId: string;
+  organizadorId?: string;
+  organizadorContacto?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -13,6 +16,8 @@ interface TorneoFormProps {
 export const TorneoForm: React.FC<TorneoFormProps> = ({
   circuitos,
   organizadorLlaveId,
+  organizadorId,
+  organizadorContacto,
   onSuccess,
   onCancel,
 }) => {
@@ -32,41 +37,42 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
   const [categoriasCreadasCount, setCategoriasCreadasCount] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nombre.trim() || !sede.trim()) {
-      alert("Completa el nombre y la sede del torneo.");
-      return;
-    }
+  e.preventDefault();
+  if (!nombre.trim() || !sede.trim()) {
+    alert("Completa el nombre y la sede del torneo.");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      // 1. Guardar con estado PENDIENTE_APROBACION
-      const docRef = await addDoc(collection(db, "torneos"), {
-        nombre: nombre.trim(),
-        circuitoId: circuitoId || null,
-        sede: sede.trim(),
-        fechaInicio: fechaInicio ? new Date(fechaInicio) : serverTimestamp(),
-        premios: premios.trim() || "A confirmar",
-        datosPago: {
-          alias: aliasPago.trim(),
-          cbu: cbuPago.trim(),
-          titular: titularCuenta.trim(),
-        },
-        organizadorLlaveId,
-        estado: "PENDIENTE_APROBACION", // 🔑 Pasa por tu aprobación como Super Admin
-        fechaCreacion: serverTimestamp(),
-      });
+  setLoading(true);
+  try {
+    const docRef = await addDoc(collection(db, "torneos"), {
+      nombre: nombre.trim(),
+      circuitoId: circuitoId || null,
+      sede: sede.trim(),
+      fechaInicio: fechaInicio ? new Date(fechaInicio) : serverTimestamp(),
+      premios: premios.trim() || "A confirmar",
+      datosPago: {
+        alias: aliasPago.trim(),
+        cbu: cbuPago.trim(),
+        titular: titularCuenta.trim(),
+      },
+      organizadorLlaveId,
+      organizadorId: organizadorId || "",
+      contactoOrganizador: organizadorContacto || "", // 👈 Guarda "2994630150" en la base de datos
+      estado: "PENDIENTE_APROBACION",
+      fechaCreacion: serverTimestamp(),
+    });
 
-      // 2. Transicionar a la carga de categorías
-      setTorneoCreadoId(docRef.id);
-    } catch (error) {
-      console.error("Error al crear el torneo:", error);
-      alert("Error al guardar el torneo.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setTorneoCreadoId(docRef.id);
+  } catch (error) {
+    console.error("Error al crear el torneo:", error);
+    alert("Error al guardar el torneo.");
+  } finally {
+    setLoading(false);
+  }
+};
 
+  // ... Resto del JSX y renderizado de formulario / categorías
   return (
     <div className="text-white">
       {!torneoCreadoId ? (

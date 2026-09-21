@@ -1,23 +1,31 @@
-// src/domain/torneo/torneo.types.ts
+export type EstadoTorneo = 'INSCRIPCION_ABIERTA' | 'PROXIMO' | 'EN_JUEGO' | 'FINALIZADO' | 'CANCELADO';
 
-export type EstadoTorneo = 'PENDIENTE_APROBACION' | 'BORRADOR' | 'INSCRIPCION_ABIERTA' | 'EN_CURSO' | 'FINALIZADO' | 'RECHAZADO';
+export interface DatosPagoTorneo {
+  alias?: string;
+  cbu?: string;
+  titular?: string;
+}
 
 export interface Torneo {
   id: string;
-  circuitoId: string;
   nombre: string;
+  circuitoId?: string;
   sede: string;
-  fechaInicio: Date;
-  fechaFin: Date;
-  categoriasValidas: string[];
-  precioInscripcionBase?: number; // Lo que cobra el organizador por pareja (ej: 20000)
-  feeFoxrenPorPareja?: number;    // Tu comisión por pareja (ej: 10000)
-  canonAprobacion?: number;       // Canon por habilitar el torneo (opcional)
-  estado: EstadoTorneo;
-  organizadorDni?: string;        // DNI del organizador responsable
-  descripcion?: string | null;
-  organizadorIds?: string[];
-  llaveId?: string;
+  premios?: string;
+  estado: string;
+  validoParaRanking?: boolean;
+  fechaInicio?: any;
+  fechaFin?: any;
+  fechaCreacion?: any;
+  datosPago?: {
+    alias?: string;
+    cbu?: string;
+    titular?: string;
+  };
   organizadorLlaveId?: string;
-  fechaCreacion?: Date;
+  organizadorId?: string;          // 👈 Soluciona TS2353
+  contactoOrganizador?: string;    // 👈 Soluciona TS2353
+  comisionPorcentaje?: number;
+  gananciaEstimadaFoxren?: number;
+  modalidadPago?: string;
 }

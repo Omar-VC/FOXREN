@@ -1,14 +1,12 @@
 // src/domain/torneo/torneo.rules.ts
-
 import type { Torneo } from './torneo.types';
 
 export const puedeInscribirseATorneo = (torneo: Torneo): boolean => {
-  return (
-    torneo.estado === "INSCRIPCION_ABIERTA" ||
-    torneo.estado === "EN_CURSO"
-  );
+  if (!torneo) return false;
+  // Se permite inscripción si el torneo está en estado PROXIMO o EN_JUEGO
+  return torneo.estado === 'PROXIMO' || torneo.estado === 'EN_JUEGO';
 };
 
-export const estaTorneoFinalizado = (torneo: Torneo): boolean => {
-  return torneo.estado === "FINALIZADO";
+export const esTorneoFinalizado = (torneo: Torneo): boolean => {
+  return torneo?.estado === 'FINALIZADO';
 };
