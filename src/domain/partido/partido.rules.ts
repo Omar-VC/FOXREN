@@ -15,11 +15,11 @@ export function partidoEsValido(
 export function partidoEstaFinalizado(
   partido: Partido
 ): boolean {
-  return partido.estado === "finalizado";
+  return partido.estado === "FINALIZADO";
 }
 
 export function partidoPuedeComenzar(
   partido: Partido
 ): boolean {
-  return partido.estado === "programado";
+  return partido.estado === "PENDIENTE";
 }

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+// 1. Agregamos updateDoc y deleteDoc a las importaciones de Firestore
+import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../infrastructure/firebase/firebase";
 import type { Torneo } from "../../../domain/torneo/torneo.types";
 
@@ -15,13 +17,12 @@ import { IngresoLlaveModal } from "../components/IngresoLlaveModal";
 import { TorneoGestionPanel } from "../components/TorneoGestionPanel";
 
 export const TorneosPage: React.FC = () => {
-  const { torneos, competencias, circuitos, parejas, loading } =
-    useTorneosRealtime();
+  const navigate = useNavigate();
+  const { torneos, competencias, circuitos, parejas, loading } = useTorneosRealtime();
 
   // Modales y Estados de Autenticación
   const [isCrearModalOpen, setIsCrearModalOpen] = useState(false);
-  const [isOrganizadorValidoParaCrear, setIsOrganizadorValidoParaCrear] =
-    useState(false);
+  const [isOrganizadorValidoParaCrear, setIsOrganizadorValidoParaCrear] = useState(false);
   const [llaveCreacion, setLlaveCreacion] = useState("");
 
   const [organizadorLogueado, setOrganizadorLogueado] = useState<{
@@ -30,18 +31,37 @@ export const TorneosPage: React.FC = () => {
     nombreCompleto?: string;
   } | null>(null);
 
-  const [torneoSeleccionado, setTorneoSeleccionado] = useState<Torneo | null>(
-    null
-  );
-  const [competenciaSeleccionada, setCompetenciaSeleccionada] = useState<
-    any | null
-  >(null);
-  const [torneoParaGestionar, setTorneoParaGestionar] = useState<any | null>(
-    null
-  );
-  const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] =
-    useState(false);
+  const [torneoSeleccionado, setTorneoSeleccionado] = useState<Torneo | null>(null);
+  const [competenciaSeleccionada, setCompetenciaSeleccionada] = useState<any | null>(null);
+  const [torneoParaGestionar, setTorneoParaGestionar] = useState<any | null>(null);
+  const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
+
+  // 2. Handlers para actualizar y eliminar parejas en Firestore
+  const handleCambiarEstadoPago = async (
+    parejaId: string,
+    nuevoEstado: "APROBADO" | "RECHAZADO" | "PENDIENTE"
+  ) => {
+    try {
+      const parejaRef = doc(db, "parejas", parejaId);
+      await updateDoc(parejaRef, {
+        estadoPago: nuevoEstado,
+      });
+    } catch (error) {
+      console.error("Error al actualizar estado de pago:", error);
+      alert("No se pudo actualizar el estado de pago.");
+    }
+  };
+
+  const handleEliminarPareja = async (parejaId: string) => {
+    try {
+      const parejaRef = doc(db, "parejas", parejaId);
+      await deleteDoc(parejaRef);
+    } catch (error) {
+      console.error("Error al eliminar la pareja:", error);
+      alert("No se pudo eliminar la pareja.");
+    }
+  };
 
   // Validación de Llave
   const validarLlaveCreacion = async (llaveIngresada: string) => {
@@ -175,7 +195,8 @@ export const TorneosPage: React.FC = () => {
               key={t.id}
               torneo={t}
               competencias={competencias}
-              onVerFicha={(torneo) => setTorneoSeleccionado(torneo)}
+              onVerDetalles={(torneo) => setTorneoSeleccionado(torneo)}
+              onVerTorneo={(torneo) => navigate(`/torneos/${torneo.id}`)}
               onGestionar={(torneo) => setTorneoParaGestionar(torneo)}
             />
           ))}
@@ -216,6 +237,7 @@ export const TorneosPage: React.FC = () => {
         </div>
       )}
 
+      {/* Modal interactivo de Detalles e Inscripción */}
       {torneoSeleccionado && (
         <TorneoDetalleModal
           torneo={torneoSeleccionado}
@@ -266,6 +288,7 @@ export const TorneosPage: React.FC = () => {
         />
       )}
 
+      {/* 3. Pasamos los nuevos handlers a TorneoGestionPanel */}
       {torneoParaGestionar && isOrganizadorAutenticado && (
         <TorneoGestionPanel
           torneo={torneoParaGestionar}
@@ -275,6 +298,8 @@ export const TorneosPage: React.FC = () => {
             setTorneoParaGestionar(null);
             setIsOrganizadorAutenticado(false);
           }}
+          onCambiarEstadoPago={handleCambiarEstadoPago}
+          onEliminarPareja={handleEliminarPareja}
         />
       )}
     </div>

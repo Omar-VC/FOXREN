@@ -6,6 +6,7 @@ import { InicioPage } from "./features/inicio/pages/InicioPage";
 import { CompetenciasPage } from "./features/competencias/pages/CompetenciasPage";
 import { JugadoresPage } from "./features/jugadores/pages/JugadoresPage";
 import { TorneosPage } from "./features/torneos/pages/TorneosPage";
+import { TorneoDetallePublico } from "./features/torneos/pages/TorneoDetallePublico";
 import { RankingPage } from "./features/ranking/pages/RankingPage";
 import { UnirsePage } from "./features/unirse/pages/UnirsePage";
 import { AdminDashboard } from "./features/admin/pages/AdminDashboard";
@@ -19,7 +20,11 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<InicioPage />} />
           <Route path="circuitos" element={<CompetenciasPage />} />
+          
+          {/* Rutas de Torneos */}
           <Route path="torneos" element={<TorneosPage />} />
+          <Route path="torneos/:torneoId" element={<TorneoDetallePublico />} />
+
           <Route path="ranking" element={<RankingPage />} />
           <Route path="jugadores" element={<JugadoresPage />} />
           <Route path="unirse" element={<UnirsePage />} />

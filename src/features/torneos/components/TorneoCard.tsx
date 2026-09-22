@@ -4,7 +4,8 @@ import type { Torneo } from '../../../domain/torneo/torneo.types';
 interface TorneoCardProps {
   torneo: Torneo;
   competencias: any[];
-  onVerFicha: (torneo: Torneo) => void;
+  onVerDetalles: (torneo: Torneo) => void;
+  onVerTorneo: (torneo: Torneo) => void;
   onGestionar: (torneo: Torneo) => void;
 }
 
@@ -46,7 +47,8 @@ const formatearFecha = (fecha: any): string => {
 export const TorneoCard: React.FC<TorneoCardProps> = ({
   torneo,
   competencias,
-  onVerFicha,
+  onVerDetalles,
+  onVerTorneo,
   onGestionar,
 }) => {
   const compsTorneo = competencias.filter((c: any) => c.torneoId === torneo.id);
@@ -105,21 +107,32 @@ export const TorneoCard: React.FC<TorneoCardProps> = ({
         </div>
       </div>
 
-      {/* Acciones */}
-      <div className="flex justify-between items-center pt-3 border-t border-slate-800/80 gap-2">
-        <button
-          type="button"
-          onClick={() => onVerFicha(torneo)}
-          className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold py-2 px-3 rounded-xl transition cursor-pointer text-center"
-        >
-          🔍 Ver ficha
-        </button>
+      {/* Acciones de la Tarjeta */}
+      <div className="flex flex-col gap-2 pt-3 border-t border-slate-800/80">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onVerDetalles(torneo)}
+            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 px-3 rounded-xl transition cursor-pointer text-center shadow-md shadow-blue-600/20"
+          >
+            🔍 Ver Detalles
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onVerTorneo(torneo)}
+            className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold py-2 px-3 rounded-xl transition cursor-pointer text-center border border-slate-700"
+          >
+            🏆 Ver Torneo
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={() => onGestionar(torneo)}
-          className="bg-slate-800/80 hover:bg-slate-700 text-blue-400 font-semibold px-3 py-2 rounded-xl text-xs transition cursor-pointer"
+          className="w-full text-center bg-slate-950/50 hover:bg-slate-800 text-slate-400 hover:text-blue-400 font-medium py-1.5 rounded-lg text-[11px] transition cursor-pointer border border-slate-800/60"
         >
-          ⚙️ Gestionar
+          ⚙️ Gestionar Torneo
         </button>
       </div>
     </div>
