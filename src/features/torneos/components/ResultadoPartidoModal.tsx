@@ -3,7 +3,12 @@ import type { Partido, SetResultado, EstadoPartido } from "../../../domain/parti
 
 interface ResultadoPartidoModalProps {
   partido: Partido;
-  onGuardar: (partidoId: string, sets: SetResultado[], ganadorId: string, estado: EstadoPartido) => Promise<void>;
+  onGuardar: (
+    partidoId: string,
+    sets: SetResultado[],
+    ganadorId: string,
+    estado: EstadoPartido
+  ) => Promise<void>;
   onClose: () => void;
 }
 
@@ -12,157 +17,247 @@ export const ResultadoPartidoModal: React.FC<ResultadoPartidoModalProps> = ({
   onGuardar,
   onClose,
 }) => {
-  const [set1P1, setSet1P1] = useState(partido.sets[0]?.juegosPareja1 ?? 0);
-  const [set1P2, setSet1P2] = useState(partido.sets[0]?.juegosPareja2 ?? 0);
-  
-  const [set2P1, setSet2P1] = useState(partido.sets[1]?.juegosPareja1 ?? 0);
-  const [set2P2, setSet2P2] = useState(partido.sets[1]?.juegosPareja2 ?? 0);
+  const set1 = partido.sets?.[0];
+  const set2 = partido.sets?.[1];
+  const set3 = partido.sets?.[2];
 
-  const [set3P1, setSet3P1] = useState(partido.sets[2]?.juegosPareja1 ?? 0);
-  const [set3P2, setSet3P2] = useState(partido.sets[2]?.juegosPareja2 ?? 0);
+  const [set1P1, setSet1P1] = useState<string>(set1?.juegosPareja1?.toString() || "");
+  const [set1P2, setSet1P2] = useState<string>(set1?.juegosPareja2?.toString() || "");
 
-  const [esTercerSet, setEsTercerSet] = useState((partido.sets.length > 2));
-  const [guardando, setGuardando] = useState(false);
+  const [set2P1, setSet2P1] = useState<string>(set2?.juegosPareja1?.toString() || "");
+  const [set2P2, setSet2P2] = useState<string>(set2?.juegosPareja2?.toString() || "");
 
-  const handleGuardar = async () => {
-    setGuardando(true);
-    try {
-      const sets: SetResultado[] = [
-        { setNumero: 1, juegosPareja1: Number(set1P1), juegosPareja2: Number(set1P2) },
-        { setNumero: 2, juegosPareja1: Number(set2P1), juegosPareja2: Number(set2P2) },
-      ];
+  const [set3P1, setSet3P1] = useState<string>(set3?.juegosPareja1?.toString() || "");
+  const [set3P2, setSet3P2] = useState<string>(set3?.juegosPareja2?.toString() || "");
 
-      if (esTercerSet) {
-        sets.push({ setNumero: 3, juegosPareja1: Number(set3P1), juegosPareja2: Number(set3P2) });
+  const [esSuperTieBreak, setEsSuperTieBreak] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const nombrePareja1 = partido.nombrePareja1 || "Pareja 1";
+  const nombrePareja2 = partido.nombrePareja2 || "Pareja 2";
+
+  const validarSet = (
+    p1: number,
+    p2: number,
+    esTercero = false
+  ): { valido: boolean; ganador: 1 | 2 | null; msg?: string } => {
+    if (isNaN(p1) || isNaN(p2))
+      return { valido: false, ganador: null, msg: "Completá los puntos de ambos lados." };
+
+    if (esTercero && esSuperTieBreak) {
+      if ((p1 >= 10 || p2 >= 10) && Math.abs(p1 - p2) >= 2) {
+        return { valido: true, ganador: p1 > p2 ? 1 : 2 };
+      }
+      return {
+        valido: false,
+        ganador: null,
+        msg: "El Super Tie-Break requiere al menos 10 puntos y diferencia de 2.",
+      };
+    }
+
+    // Reglas set estándar de Pádel (6-0 a 6-4, 7-5, 7-6)
+    if ((p1 === 6 && p2 <= 4) || (p1 === 7 && (p2 === 5 || p2 === 6)))
+      return { valido: true, ganador: 1 };
+    if ((p2 === 6 && p1 <= 4) || (p2 === 7 && (p1 === 5 || p1 === 6)))
+      return { valido: true, ganador: 2 };
+
+    return {
+      valido: false,
+      ganador: null,
+      msg: "Resultado de set no válido (ejemplos válidos: 6-4, 7-5, 7-6).",
+    };
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+
+    const s1P1 = parseInt(set1P1, 10);
+    const s1P2 = parseInt(set1P2, 10);
+    const s2P1 = parseInt(set2P1, 10);
+    const s2P2 = parseInt(set2P2, 10);
+
+    const resSet1 = validarSet(s1P1, s1P2);
+    if (!resSet1.valido) {
+      setErrorMsg(`Set 1 inválido: ${resSet1.msg}`);
+      return;
+    }
+
+    const resSet2 = validarSet(s2P1, s2P2);
+    if (!resSet2.valido) {
+      setErrorMsg(`Set 2 inválido: ${resSet2.msg}`);
+      return;
+    }
+
+    const nuevosSets: SetResultado[] = [
+      { setNumero: 1, juegosPareja1: s1P1, juegosPareja2: s1P2 },
+      { setNumero: 2, juegosPareja1: s2P1, juegosPareja2: s2P2 },
+    ];
+
+    let ganadorFinalId = "";
+
+    // Si empatan en sets (1-1)
+    if (resSet1.ganador !== resSet2.ganador) {
+      const s3P1Num = parseInt(set3P1, 10);
+      const s3P2Num = parseInt(set3P2, 10);
+
+      const resSet3 = validarSet(s3P1Num, s3P2Num, true);
+      if (!resSet3.valido) {
+        setErrorMsg(`Set 3 requerido por empate 1-1: ${resSet3.msg}`);
+        return;
       }
 
-      // Determinar ganador por suma de sets
-      let setsGanadosP1 = 0;
-      let setsGanadosP2 = 0;
+      nuevosSets.push({ setNumero: 3, juegosPareja1: s3P1Num, juegosPareja2: s3P2Num });
+      ganadorFinalId = resSet3.ganador === 1 ? partido.pareja1Id : partido.pareja2Id;
+    } else {
+      ganadorFinalId = resSet1.ganador === 1 ? partido.pareja1Id : partido.pareja2Id;
+    }
 
-      sets.forEach((s) => {
-        if (s.juegosPareja1 > s.juegosPareja2) setsGanadosP1++;
-        if (s.juegosPareja2 > s.juegosPareja1) setsGanadosP2++;
-      });
+    setLoading(true);
 
-      const ganadorId = setsGanadosP1 > setsGanadosP2 ? partido.pareja1Id : partido.pareja2Id;
-
-      await onGuardar(partido.id, sets, ganadorId, "FINALIZADO");
+    try {
+      await onGuardar(partido.id, nuevosSets, ganadorFinalId, "FINALIZADO");
       onClose();
+    } catch (err) {
+      console.error("Error al guardar resultado:", err);
+      setErrorMsg("Ocurrió un error al guardar el resultado.");
     } finally {
-      setGuardando(false);
+      setLoading(false);
     }
   };
 
+  const limpiarSoloNumeros = (val: string) => val.replace(/\D/g, "");
+
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 max-w-md w-full text-white space-y-4 shadow-2xl">
-        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-          <h3 className="font-bold text-sm">Cargar Resultado de Partido</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
-        </div>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 text-white max-w-md w-full relative shadow-2xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold cursor-pointer"
+        >
+          ✕
+        </button>
 
-        <div className="space-y-3 text-xs">
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-            <span className="font-bold text-blue-400">{partido.nombrePareja1 || "Pareja 1"}</span>
-            <span className="text-slate-500 font-mono">VS</span>
-            <span className="font-bold text-emerald-400">{partido.nombrePareja2 || "Pareja 2"}</span>
+        <h3 className="text-lg font-bold mb-1">Cargar / Editar Resultado</h3>
+        <p className="text-xs text-slate-400 mb-4">Partido de Torneo</p>
+
+        {errorMsg && (
+          <div className="bg-red-500/10 border border-red-500/40 text-red-400 text-xs p-3 rounded-xl mb-4">
+            ⚠️ {errorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+            {/* Cabecera Tabla */}
+            <div className="grid grid-cols-12 text-[11px] text-slate-400 font-semibold border-b border-slate-800 pb-2 text-center">
+              <span className="col-span-6 text-left">Pareja</span>
+              <span className="col-span-2">Set 1</span>
+              <span className="col-span-2">Set 2</span>
+              <span className="col-span-2">Set 3</span>
+            </div>
+
+            {/* Pareja 1 */}
+            <div className="grid grid-cols-12 items-center text-xs gap-1">
+              <span className="col-span-6 font-bold text-blue-400 truncate">
+                {nombrePareja1}
+              </span>
+              <div className="col-span-2">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={set1P1}
+                  onChange={(e) => setSet1P1(limpiarSoloNumeros(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 text-center rounded-lg py-1.5 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="col-span-2">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={set2P1}
+                  onChange={(e) => setSet2P1(limpiarSoloNumeros(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 text-center rounded-lg py-1.5 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="col-span-2">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={set3P1}
+                  onChange={(e) => setSet3P1(limpiarSoloNumeros(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 text-center rounded-lg py-1.5 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Pareja 2 */}
+            <div className="grid grid-cols-12 items-center text-xs gap-1">
+              <span className="col-span-6 font-bold text-amber-400 truncate">
+                {nombrePareja2}
+              </span>
+              <div className="col-span-2">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={set1P2}
+                  onChange={(e) => setSet1P2(limpiarSoloNumeros(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 text-center rounded-lg py-1.5 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="col-span-2">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={set2P2}
+                  onChange={(e) => setSet2P2(limpiarSoloNumeros(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 text-center rounded-lg py-1.5 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="col-span-2">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={set3P2}
+                  onChange={(e) => setSet3P2(limpiarSoloNumeros(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 text-center rounded-lg py-1.5 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Set 1 */}
-          <div className="grid grid-cols-3 gap-2 items-center bg-slate-800/40 p-2 rounded-lg">
-            <span className="font-bold text-slate-300">Set 1:</span>
-            <input
-              type="number"
-              min="0"
-              max="15"
-              value={set1P1}
-              onChange={(e) => setSet1P1(Number(e.target.value))}
-              className="bg-slate-950 border border-slate-700 rounded p-1.5 text-center font-bold text-blue-400"
-            />
-            <input
-              type="number"
-              min="0"
-              max="15"
-              value={set1P2}
-              onChange={(e) => setSet1P2(Number(e.target.value))}
-              className="bg-slate-950 border border-slate-700 rounded p-1.5 text-center font-bold text-emerald-400"
-            />
-          </div>
-
-          {/* Set 2 */}
-          <div className="grid grid-cols-3 gap-2 items-center bg-slate-800/40 p-2 rounded-lg">
-            <span className="font-bold text-slate-300">Set 2:</span>
-            <input
-              type="number"
-              min="0"
-              max="15"
-              value={set2P1}
-              onChange={(e) => setSet2P1(Number(e.target.value))}
-              className="bg-slate-950 border border-slate-700 rounded p-1.5 text-center font-bold text-blue-400"
-            />
-            <input
-              type="number"
-              min="0"
-              max="15"
-              value={set2P2}
-              onChange={(e) => setSet2P2(Number(e.target.value))}
-              className="bg-slate-950 border border-slate-700 rounded p-1.5 text-center font-bold text-emerald-400"
-            />
-          </div>
-
-          {/* Habilitar Set 3 */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              id="tercerSet"
-              checked={esTercerSet}
-              onChange={(e) => setEsTercerSet(e.target.checked)}
-              className="rounded bg-slate-950 border-slate-700 text-blue-500"
+              id="superTieBreak"
+              checked={esSuperTieBreak}
+              onChange={(e) => setEsSuperTieBreak(e.target.value === "true")}
+              className="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0"
             />
-            <label htmlFor="tercerSet" className="text-slate-400 text-[11px] cursor-pointer">
-              ¿Se jugó un 3er set / Super Tie-Break?
+            <label htmlFor="superTieBreak" className="text-xs text-slate-300">
+              El 3er set se definió por Super Tie-Break (a 10 puntos)
             </label>
           </div>
 
-          {esTercerSet && (
-            <div className="grid grid-cols-3 gap-2 items-center bg-slate-800/40 p-2 rounded-lg">
-              <span className="font-bold text-slate-300">Set 3:</span>
-              <input
-                type="number"
-                min="0"
-                max="15"
-                value={set3P1}
-                onChange={(e) => setSet3P1(Number(e.target.value))}
-                className="bg-slate-950 border border-slate-700 rounded p-1.5 text-center font-bold text-blue-400"
-              />
-              <input
-                type="number"
-                min="0"
-                max="15"
-                value={set3P2}
-                onChange={(e) => setSet3P2(Number(e.target.value))}
-                className="bg-slate-950 border border-slate-700 rounded p-1.5 text-center font-bold text-emerald-400"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-          <button
-            onClick={onClose}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs"
-          >
-            Cancelar
-          </button>
-          <button
-            disabled={guardando}
-            onClick={handleGuardar}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition disabled:opacity-50"
-          >
-            {guardando ? "Guardando..." : "✓ Confirmar Resultado"}
-          </button>
-        </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800 text-xs cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition cursor-pointer shadow-lg shadow-blue-600/20 disabled:opacity-50"
+            >
+              {loading ? "Guardando..." : "Guardar Resultado"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
