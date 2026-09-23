@@ -5,6 +5,8 @@ import {
   where,
   getDocs,
   addDoc,
+  doc,
+  updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../../../infrastructure/firebase/firebase";
@@ -22,12 +24,14 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
 }) => {
   const [dni1, setDni1] = useState("");
   const [j1Existe, setJ1Existe] = useState<boolean | null>(null);
+  const [j1DocId, setJ1DocId] = useState<string | null>(null);
   const [nombre1, setNombre1] = useState("");
   const [apellido1, setApellido1] = useState("");
   const [telefono1, setTelefono1] = useState("");
 
   const [dni2, setDni2] = useState("");
   const [j2Existe, setJ2Existe] = useState<boolean | null>(null);
+  const [j2DocId, setJ2DocId] = useState<string | null>(null);
   const [nombre2, setNombre2] = useState("");
   const [apellido2, setApellido2] = useState("");
   const [telefono2, setTelefono2] = useState("");
@@ -46,7 +50,6 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
     competencia?.costo ??
     0;
 
-  // Busca el alias en las distintas propiedades donde pudo haber sido guardado
   const aliasPago =
     competencia?.aliasPago ||
     competencia?.alias ||
@@ -55,7 +58,7 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
     "Sin Alias Configurado";
 
   const validarFormatoDNI = (dni: string) => /^\d{7,8}$/.test(dni.trim());
-  const validarFormatoTel = (tel: string) => /^\d{10,13}$/.test(tel.trim());
+  const validarFormatoTel = (tel: string) => /^\d{8,13}$/.test(tel.trim());
 
   const copiarAlias = () => {
     navigator.clipboard.writeText(aliasPago);
@@ -69,7 +72,7 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
 
     if (!validarFormatoDNI(d1) || !validarFormatoDNI(d2)) {
       setErrorMsg(
-        "Ingresá números de DNI válidos (7 u 8 dígitos sin puntos ni espacios).",
+        "Ingresá números de DNI válidos (7 u 8 dígitos sin puntos ni espacios)."
       );
       return;
     }
@@ -83,28 +86,36 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
     setErrorMsg(null);
 
     try {
+      // Búsqueda Jugador 1
       const q1 = query(collection(db, "jugadores"), where("dni", "==", d1));
       const snap1 = await getDocs(q1);
       if (!snap1.empty) {
-        const doc1 = snap1.docs[0].data();
+        const docSnap1 = snap1.docs[0];
+        const doc1 = docSnap1.data();
+        setJ1DocId(docSnap1.id);
         setNombre1(doc1.nombre || "");
         setApellido1(doc1.apellido || "");
         setTelefono1(doc1.telefono || "");
         setJ1Existe(true);
       } else {
         setJ1Existe(false);
+        setJ1DocId(null);
       }
 
+      // Búsqueda Jugador 2
       const q2 = query(collection(db, "jugadores"), where("dni", "==", d2));
       const snap2 = await getDocs(q2);
       if (!snap2.empty) {
-        const doc2 = snap2.docs[0].data();
+        const docSnap2 = snap2.docs[0];
+        const doc2 = docSnap2.data();
+        setJ2DocId(docSnap2.id);
         setNombre2(doc2.nombre || "");
         setApellido2(doc2.apellido || "");
         setTelefono2(doc2.telefono || "");
         setJ2Existe(true);
       } else {
         setJ2Existe(false);
+        setJ2DocId(null);
       }
 
       setBusquedaRealizada(true);
@@ -129,12 +140,10 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
       return;
     }
 
-    if (
-      (!j1Existe && !validarFormatoTel(telefono1)) ||
-      (!j2Existe && !validarFormatoTel(telefono2))
-    ) {
+    // Obligar a ingresar un teléfono válido para ambos jugadores siempre
+    if (!validarFormatoTel(telefono1) || !validarFormatoTel(telefono2)) {
       setErrorMsg(
-        "Ingresá números de WhatsApp válidos (mínimo 10 dígitos, ej: 2991234567).",
+        "Ingresá números de WhatsApp válidos para ambos jugadores (mínimo 8 dígitos)."
       );
       return;
     }
@@ -143,9 +152,10 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
     setErrorMsg(null);
 
     try {
+      // Validar inscripciones duplicadas en la competencia
       const qParejas = query(
         collection(db, "parejas"),
-        where("competenciaId", "==", competencia.id),
+        where("competenciaId", "==", competencia.id)
       );
       const snapParejas = await getDocs(qParejas);
 
@@ -164,12 +174,13 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
 
       if (duplicado) {
         setErrorMsg(
-          "Uno o ambos jugadores ya figuran inscriptos en esta categoría.",
+          "Uno o ambos jugadores ya figuran inscriptos en esta categoría."
         );
         setLoadingGuardado(false);
         return;
       }
 
+      // Procesar Jugador 1
       if (!j1Existe) {
         await addDoc(collection(db, "jugadores"), {
           dni: dni1.trim(),
@@ -180,8 +191,14 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
           origenRegistro: "INSCRIPCION_RAPIDA",
           fechaRegistro: serverTimestamp(),
         });
+      } else if (j1DocId) {
+        // Si ya existía pero no tenía teléfono cargado, actualizamos su ficha
+        await updateDoc(doc(db, "jugadores", j1DocId), {
+          telefono: telefono1.trim(),
+        });
       }
 
+      // Procesar Jugador 2
       if (!j2Existe) {
         await addDoc(collection(db, "jugadores"), {
           dni: dni2.trim(),
@@ -192,8 +209,14 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
           origenRegistro: "INSCRIPCION_RAPIDA",
           fechaRegistro: serverTimestamp(),
         });
+      } else if (j2DocId) {
+        // Si ya existía pero no tenía teléfono cargado, actualizamos su ficha
+        await updateDoc(doc(db, "jugadores", j2DocId), {
+          telefono: telefono2.trim(),
+        });
       }
 
+      // Registrar Pareja con teléfonos siempre completos
       await addDoc(collection(db, "parejas"), {
         competenciaId: competencia.id,
         torneoId: competencia.torneoId || competencia.id,
@@ -216,13 +239,13 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
       });
 
       alert(
-        "¡Inscripción registrada con éxito! El organizador revisará tu comprobante para confirmar el cupo.",
+        "¡Inscripción registrada con éxito! El organizador revisará tu comprobante para confirmar el cupo."
       );
       onSuccess();
     } catch (err) {
       console.error("Error al guardar inscripción:", err);
       setErrorMsg(
-        "Ocurrió un error al registrar la pareja. Revisa tu conexión.",
+        "Ocurrió un error al registrar la pareja. Revisa tu conexión."
       );
     } finally {
       setLoadingGuardado(false);
@@ -312,7 +335,8 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
                 type="text"
                 placeholder="Ej: 38123456"
                 value={dni1}
-                onChange={(e) => setDni1(e.target.value)}
+                onChange={(e) => setDni1(e.target.value.replace(/\D/g, ""))}
+                maxLength={8}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
@@ -325,7 +349,8 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
                 type="text"
                 placeholder="Ej: 39123456"
                 value={dni2}
-                onChange={(e) => setDni2(e.target.value)}
+                onChange={(e) => setDni2(e.target.value.replace(/\D/g, ""))}
+                maxLength={8}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
@@ -342,7 +367,7 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
                 type="button"
                 onClick={buscarJugadores}
                 disabled={loadingBusqueda}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2 rounded-xl text-sm transition cursor-pointer shadow-lg shadow-blue-600/20"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2 rounded-xl text-sm transition cursor-pointer shadow-lg shadow-blue-600/20 disabled:opacity-50"
               >
                 {loadingBusqueda ? "Validando DNI..." : "Verificar Jugadores →"}
               </button>
@@ -410,9 +435,9 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
                   type="text"
                   placeholder="2991234567"
                   value={telefono1}
-                  disabled={!!j1Existe}
-                  onChange={(e) => setTelefono1(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs disabled:opacity-60 text-white"
+                  onChange={(e) => setTelefono1(e.target.value.replace(/\D/g, ""))}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none"
+                  required
                 />
               </div>
             </div>
@@ -469,9 +494,9 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
                   type="text"
                   placeholder="2991234567"
                   value={telefono2}
-                  disabled={!!j2Existe}
-                  onChange={(e) => setTelefono2(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs disabled:opacity-60 text-white"
+                  onChange={(e) => setTelefono2(e.target.value.replace(/\D/g, ""))}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none"
+                  required
                 />
               </div>
             </div>
@@ -515,7 +540,7 @@ export const InscripcionParejaModal: React.FC<InscripcionParejaModalProps> = ({
                 <button
                   type="submit"
                   disabled={loadingGuardado}
-                  className="bg-green-500 hover:bg-green-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-xs transition cursor-pointer shadow-lg shadow-green-500/20"
+                  className="bg-green-500 hover:bg-green-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-xs transition cursor-pointer shadow-lg shadow-green-500/20 disabled:opacity-50"
                 >
                   {loadingGuardado ? "Confirmando..." : "Confirmar e Inscribir"}
                 </button>
