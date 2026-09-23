@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// 1. Agregamos updateDoc y deleteDoc a las importaciones de Firestore
 import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../infrastructure/firebase/firebase";
 import type { Torneo } from "../../../domain/torneo/torneo.types";
@@ -37,7 +36,7 @@ export const TorneosPage: React.FC = () => {
   const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
 
-  // 2. Handlers para actualizar y eliminar parejas en Firestore
+  // Handlers para actualizar y eliminar parejas en Firestore
   const handleCambiarEstadoPago = async (
     parejaId: string,
     nuevoEstado: "APROBADO" | "RECHAZADO" | "PENDIENTE"
@@ -137,28 +136,28 @@ export const TorneosPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8">
+    <div className="min-h-screen text-slate-100 p-4 md:p-8">
       {/* Cabecera */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-blue-400 tracking-tight">
-            Torneos Foxren
+          <h1 className="text-3xl font-extrabold text-fox-neon tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+            Torneos FOXREN
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Explora, inscribe a tu pareja o gestiona tu competencia
+          <p className="text-xs text-fox-muted mt-1">
+            Explorá, inscribí a tu pareja o gestioná tu competencia profesional
           </p>
         </div>
 
         <button
           onClick={() => setIsCrearModalOpen(true)}
-          className="bg-green-500 hover:bg-green-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-lg shadow-green-500/20 cursor-pointer"
+          className="bg-fox-neon hover:bg-emerald-400 text-fox-bg font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-fox-glow cursor-pointer"
         >
           ➕ Crear Nuevo Torneo
         </button>
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 border-b border-fox-border/40">
         {[
           "TODOS",
           "INSCRIPCION_ABIERTA",
@@ -168,10 +167,10 @@ export const TorneosPage: React.FC = () => {
           <button
             key={est}
             onClick={() => setFiltroEstado(est)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               filtroEstado === est
-                ? "bg-blue-600 text-white"
-                : "bg-slate-900 text-slate-400 border border-slate-800"
+                ? "bg-fox-neon text-fox-bg font-bold shadow-fox-glow"
+                : "bg-fox-surface text-fox-muted border border-fox-border hover:border-fox-subtle hover:text-white"
             }`}
           >
             {est.replace("_", " ")}
@@ -181,15 +180,18 @@ export const TorneosPage: React.FC = () => {
 
       {/* Grid de Torneos */}
       {loading ? (
-        <p className="text-center text-slate-500 py-12 text-sm">
-          Cargando torneos...
-        </p>
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-8 h-8 border-2 border-fox-neon border-t-transparent rounded-full animate-spin mb-3"></div>
+          <p className="text-slate-400 text-sm font-medium">Cargando torneos...</p>
+        </div>
       ) : torneosFiltrados.length === 0 ? (
-        <p className="text-center text-slate-500 py-12 text-sm">
-          No hay torneos registrados en esta categoría.
-        </p>
+        <div className="bg-fox-surface/50 border border-fox-border/60 rounded-2xl p-12 text-center max-w-md mx-auto my-8">
+          <p className="text-fox-muted text-sm font-medium">
+            No se encontraron torneos registrados en este estado.
+          </p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {torneosFiltrados.map((t) => (
             <TorneoCard
               key={t.id}
@@ -207,16 +209,16 @@ export const TorneosPage: React.FC = () => {
       {isCrearModalOpen && !isOrganizadorValidoParaCrear && (
         <IngresoLlaveModal
           titulo="Validación de Organizador"
-          subtitulo="Ingresa tu llave autorizada para crear torneos"
+          subtitulo="Ingresá tu llave autorizada para crear torneos"
           onValidar={validarLlaveCreacion}
           onClose={() => setIsCrearModalOpen(false)}
         />
       )}
 
       {isCrearModalOpen && isOrganizadorValidoParaCrear && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 text-white max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Crear Nuevo Torneo</h2>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-fox-surface border border-fox-border rounded-2xl max-w-2xl w-full p-6 text-slate-100 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <h2 className="text-xl font-bold mb-4 text-fox-neon">Crear Nuevo Torneo</h2>
             <TorneoForm
               circuitos={circuitos}
               organizadorLlaveId={llaveCreacion}
@@ -279,7 +281,7 @@ export const TorneosPage: React.FC = () => {
       {torneoParaGestionar && !isOrganizadorAutenticado && (
         <IngresoLlaveModal
           titulo="Gestionar Torneo"
-          subtitulo={`Ingresa la llave de organizador para ${torneoParaGestionar.nombre}`}
+          subtitulo={`Ingresá la llave de organizador para ${torneoParaGestionar.nombre}`}
           onValidar={(llave) => {
             if (llave.length >= 4) setIsOrganizadorAutenticado(true);
             else alert("Llave incorrecta.");
@@ -288,7 +290,7 @@ export const TorneosPage: React.FC = () => {
         />
       )}
 
-      {/* 3. Pasamos los nuevos handlers a TorneoGestionPanel */}
+      {/* Pasamos los handlers a TorneoGestionPanel */}
       {torneoParaGestionar && isOrganizadorAutenticado && (
         <TorneoGestionPanel
           torneo={torneoParaGestionar}

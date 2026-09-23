@@ -7,14 +7,34 @@
 
 body {
   font-family: var(--font-family-base);
-  background: linear-gradient(
-    180deg,
-    #1a2524 0%,        /* Oscuro profundo arriba */
-    #273736 70%,       /* Oscuro/grisáceo hasta casi toda la pantalla */
-    #4e6c6d 85%,       /* transición suave */
-    #ffffff 100%       /* Blanco recién en el último cuarto */
+  background-color: var(--color-bg-main);
+  background-image: radial-gradient(
+    circle at top center,
+    #0f172a 0%,
+    #090d16 80%
   );
-  color: var(--color-light);
+  color: var(--color-text-main);
   min-height: 100vh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar Oscura */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
