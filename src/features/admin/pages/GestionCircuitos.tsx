@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { circuitosRepository } from "../../../infrastructure/repositories/circuitosRepository";
 import { organizadoresRepository } from "../../../infrastructure/repositories/organizadoresRepository";
+import { torneosRepository } from "../../../infrastructure/repositories/torneosRepository";
 import { db } from "../../../infrastructure/firebase/firebase";
 import { collection, addDoc, getDocs, Timestamp } from "firebase/firestore";
 import { COLLECTIONS } from "../../../infrastructure/firebase/collections";
 import type { Circuito } from "../../../domain/circuito/circuito.types";
 import type { Organizador } from "../../../domain/organizador/organizador.types";
+import type { Torneo } from "../../../domain/torneo/torneo.types";
 
 interface LlaveData {
   id: string;
@@ -23,6 +25,8 @@ export const GestionCircuitos: React.FC = () => {
   const [circuitos, setCircuitos] = useState<Circuito[]>([]);
   const [llaves, setLlaves] = useState<LlaveData[]>([]);
   const [organizadores, setOrganizadores] = useState<Organizador[]>([]);
+  const [torneos, setTorneos] = useState<Torneo[]>([]);
+  const [circuitoFiltroId, setCircuitoFiltroId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Formulario Circuito
@@ -43,12 +47,14 @@ export const GestionCircuitos: React.FC = () => {
   const cargarDatos = async () => {
     try {
       setLoading(true);
-      const [dataCircuitos, dataOrgs] = await Promise.all([
+      const [dataCircuitos, dataOrgs, dataTorneos] = await Promise.all([
         circuitosRepository.obtenerCircuitos(),
-        organizadoresRepository.obtenerTodos()
+        organizadoresRepository.obtenerTodos(),
+        torneosRepository.obtenerTorneos()
       ]);
       setCircuitos(dataCircuitos);
       setOrganizadores(dataOrgs);
+      setTorneos(dataTorneos);
 
       const snapLlaves = await getDocs(collection(db, COLLECTIONS.llavesOrganizadores));
       const listLlaves = snapLlaves.docs.map((doc) => ({
@@ -68,8 +74,8 @@ export const GestionCircuitos: React.FC = () => {
     try {
       await circuitosRepository.crearCircuito({
         nombre: nombreCircuito,
-        temporada: temporada, // <- Se envía directamente como string ("2026")
-        estado: "activo",     // <- En minúscula para coincidir con EstadoCircuito
+        temporada: temporada,
+        estado: "activo",
       });
       alert("Circuito creado exitosamente");
       setNombreCircuito("");
@@ -126,6 +132,10 @@ export const GestionCircuitos: React.FC = () => {
       alert("Error al generar la llave");
     }
   };
+
+  const torneosFiltrados = circuitoFiltroId
+    ? torneos.filter((t) => t.circuitoId === circuitoFiltroId)
+    : [];
 
   if (loading) return <p className="text-gray-400">Cargando gestión de circuitos...</p>;
 
@@ -185,7 +195,6 @@ export const GestionCircuitos: React.FC = () => {
               </select>
             </div>
 
-            {/* Búsqueda por DNI/CUIT o Selector */}
             <div>
               <label className="block text-xs text-gray-400 mb-1">Buscar Organizador por DNI / CUIT</label>
               <div className="flex gap-2">
@@ -205,7 +214,6 @@ export const GestionCircuitos: React.FC = () => {
                 </button>
               </div>
               
-              {/* Opción rápida de selección manual desde la lista */}
               <div className="mt-2">
                 <span className="text-[10px] text-gray-500 block mb-1">O seleccioná uno de la lista:</span>
                 <select
@@ -264,17 +272,69 @@ export const GestionCircuitos: React.FC = () => {
             <p className="text-sm text-gray-500">No hay circuitos creados.</p>
           ) : (
             <ul className="space-y-2">
-              {circuitos.map((c) => (
-                <li key={c.id} className="p-3 bg-gray-900/80 border border-gray-800 rounded flex justify-between items-center text-sm">
-                  <div>
-                    <strong className="text-white block">{c.nombre}</strong>
-                    <span className="text-xs text-gray-400">Temporada {c.temporada}</span>
-                  </div>
-                  <span className="text-xs px-2 py-0.5 bg-green-900/60 text-green-300 border border-green-700/50 rounded">
-                    {c.estado}
-                  </span>
-                </li>
-              ))}
+              {circuitos.map((c) => {
+                const torneosDelCircuito = torneos.filter((t) => t.circuitoId === c.id);
+                const isSelected = circuitoFiltroId === c.id;
+
+                return (
+                  <li
+                    key={c.id}
+                    className={`p-3 border rounded text-sm transition ${
+                      isSelected
+                        ? "bg-gray-800 border-[var(--color-primary)]"
+                        : "bg-gray-900/80 border-gray-800 hover:border-gray-700"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <strong className="text-white block">{c.nombre}</strong>
+                        <span className="text-xs text-gray-400">
+                          Temporada {c.temporada} • {torneosDelCircuito.length} torneo(s)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCircuitoFiltroId(isSelected ? null : c.id)}
+                          className={`px-2.5 py-1 text-xs rounded font-semibold transition ${
+                            isSelected
+                              ? "bg-[var(--color-primary)] text-black"
+                              : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                          }`}
+                        >
+                          {isSelected ? "Ver Todos" : "Ver Torneos"}
+                        </button>
+                        <span className="text-xs px-2 py-0.5 bg-green-900/60 text-green-300 border border-green-700/50 rounded">
+                          {c.estado}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Torneos desplegados dentro de la tarjeta si está seleccionado */}
+                    {isSelected && (
+                      <div className="mt-3 pt-3 border-t border-gray-700/60 space-y-1.5">
+                        <span className="text-xs font-semibold text-gray-400 block">
+                          Torneos de este circuito:
+                        </span>
+                        {torneosFiltrados.length === 0 ? (
+                          <p className="text-xs text-gray-500 italic">No hay torneos vinculados a este circuito.</p>
+                        ) : (
+                          torneosFiltrados.map((t) => (
+                            <div
+                              key={t.id}
+                              className="px-2.5 py-1.5 bg-gray-950/60 rounded border border-gray-800 flex justify-between items-center text-xs"
+                            >
+                              <span className="text-gray-200 font-medium">{t.nombre}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 bg-gray-800 text-gray-400 rounded">
+                                Sede: {t.sede}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
