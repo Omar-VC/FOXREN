@@ -1,8 +1,9 @@
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { COLLECTIONS } from "../firebase/collections";
-import type { Competencia } from "../../domain/competencia/competencia.types";
+import type { Competencia, EstadoCompetencia } from "../../domain/competencia/competencia.types";
 import { competenciaMapper } from "../mappers/competencia.mapper";
+
 
 
 export const competenciasRepository = {
@@ -28,6 +29,13 @@ export const competenciasRepository = {
     );
     const snap = await getDocs(q);
     return snap.docs.map((doc) => competenciaMapper.fromFirestore(doc.id, doc.data()));
+  },
+
+  async cambiarEstado(competenciaId: string, nuevoEstado: EstadoCompetencia): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.competencias || "competencias", competenciaId);
+    await updateDoc(docRef, {
+      estado: nuevoEstado,
+    });
   },
 };
 

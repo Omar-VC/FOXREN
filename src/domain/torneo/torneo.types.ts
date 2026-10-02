@@ -1,4 +1,10 @@
-export type EstadoTorneo = 'INSCRIPCION_ABIERTA' | 'PROXIMO' | 'EN_JUEGO' | 'FINALIZADO' | 'CANCELADO';
+// src/domain/torneo/torneo.types.ts
+
+export type EstadoTorneo = 
+  | 'PENDIENTE_APROBACION' 
+  | 'APROBADO' 
+  | 'RECHAZADO' 
+  | 'ARCHIVADO';
 
 export interface DatosPagoTorneo {
   alias?: string;
@@ -9,25 +15,21 @@ export interface DatosPagoTorneo {
 export interface Torneo {
   id: string;
   nombre: string;
-  circuitoId?: string;
+  circuitoId: string;
   sede: string;
   premios?: string;
-  estado: string;
+  estado: EstadoTorneo;
   validoParaRanking?: boolean;
   fechaInicio?: any;
   fechaFin?: any;
   fechaCreacion?: any;
-  aliasPago?: string;
-  alias?: string;
-  datosPago?: {
-    alias?: string;
-    cbu?: string;
-    titular?: string;
-  };
+  datosPago?: DatosPagoTorneo;
   organizadorLlaveId?: string;
   organizadorId?: string;
   contactoOrganizador?: string;
   comisionPorcentaje?: number;
   gananciaEstimadaFoxren?: number;
   modalidadPago?: string;
+  alias?: string;
+  aliasPago?: string;
 }
