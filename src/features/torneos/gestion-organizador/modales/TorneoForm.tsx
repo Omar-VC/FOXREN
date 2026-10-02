@@ -36,41 +36,53 @@ export const TorneoForm: React.FC<TorneoFormProps> = ({
   const [torneoCreadoId, setTorneoCreadoId] = useState<string | null>(null);
   const [categoriasCreadasCount, setCategoriasCreadasCount] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!nombre.trim() || !sede.trim()) {
-    alert("Completa el nombre y la sede del torneo.");
-    return;
-  }
+ const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombre.trim() || !sede.trim()) {
+      alert("Completa el nombre y la sede del torneo.");
+      return;
+    }
 
-  setLoading(true);
-  try {
-    const docRef = await addDoc(collection(db, "torneos"), {
-      nombre: nombre.trim(),
-      circuitoId: circuitoId || null,
-      sede: sede.trim(),
-      fechaInicio: fechaInicio ? new Date(fechaInicio) : serverTimestamp(),
-      premios: premios.trim() || "A confirmar",
-      datosPago: {
-        alias: aliasPago.trim(),
-        cbu: cbuPago.trim(),
-        titular: titularCuenta.trim(),
-      },
-      organizadorLlaveId,
-      organizadorId: organizadorId || "",
-      contactoOrganizador: organizadorContacto || "", // 👈 Guarda "2994630150" en la base de datos
-      estado: "PENDIENTE_APROBACION",
-      fechaCreacion: serverTimestamp(),
-    });
+    setLoading(true);
+    try {
+      // --- INICIO FIX DE FECHA ---
+      let fechaAguardar: any = serverTimestamp();
+      
+      if (fechaInicio) {
+        // fechaInicio viene como "YYYY-MM-DD" (Ej: "2026-10-03")
+        const [year, month, day] = fechaInicio.split("-");
+        // Al pasarle los números separados, JS usa tu zona horaria local (Argentina)
+        // El mes se resta 1 porque en JS Enero es 0 y Diciembre es 11
+        fechaAguardar = new Date(Number(year), Number(month) - 1, Number(day));
+      }
+      // --- FIN FIX DE FECHA ---
 
-    setTorneoCreadoId(docRef.id);
-  } catch (error) {
-    console.error("Error al crear el torneo:", error);
-    alert("Error al guardar el torneo.");
-  } finally {
-    setLoading(false);
-  }
-};
+      const docRef = await addDoc(collection(db, "torneos"), {
+        nombre: nombre.trim(),
+        circuitoId: circuitoId || null,
+        sede: sede.trim(),
+        fechaInicio: fechaAguardar, // Usamos la variable corregida
+        premios: premios.trim() || "A confirmar",
+        datosPago: {
+          alias: aliasPago.trim(),
+          cbu: cbuPago.trim(),
+          titular: titularCuenta.trim(),
+        },
+        organizadorLlaveId,
+        organizadorId: organizadorId || "",
+        contactoOrganizador: organizadorContacto || "", 
+        estado: "PENDIENTE_APROBACION",
+        fechaCreacion: serverTimestamp(),
+      });
+
+      setTorneoCreadoId(docRef.id);
+    } catch (error) {
+      console.error("Error al crear el torneo:", error);
+      alert("Error al guardar el torneo.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ... Resto del JSX y renderizado de formulario / categorías
   return (
