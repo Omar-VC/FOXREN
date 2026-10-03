@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc } from "firebase/firestore";
+import {
+  doc,
+  getDocs,
+  collection,
+  query,
+  where,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "../../../infrastructure/firebase/firebase";
 import type { Torneo } from "../../../domain/torneo/torneo.types";
 
@@ -21,11 +29,13 @@ import { TorneoGestionPanel } from "../gestion-organizador/TorneoGestionPanel";
 
 export const TorneosPage: React.FC = () => {
   const navigate = useNavigate();
-  const { torneos, competencias, circuitos, parejas, loading } = useTorneosRealtime();
+  const { torneos, competencias, circuitos, parejas, loading } =
+    useTorneosRealtime();
 
   // Modales y Estados de Autenticación
   const [isCrearModalOpen, setIsCrearModalOpen] = useState(false);
-  const [isOrganizadorValidoParaCrear, setIsOrganizadorValidoParaCrear] = useState(false);
+  const [isOrganizadorValidoParaCrear, setIsOrganizadorValidoParaCrear] =
+    useState(false);
   const [llaveCreacion, setLlaveCreacion] = useState("");
 
   const [organizadorLogueado, setOrganizadorLogueado] = useState<{
@@ -34,39 +44,46 @@ export const TorneosPage: React.FC = () => {
     nombreCompleto?: string;
   } | null>(null);
 
-  const [torneoSeleccionado, setTorneoSeleccionado] = useState<Torneo | null>(null);
-  const [competenciaSeleccionada, setCompetenciaSeleccionada] = useState<any | null>(null);
-  const [torneoParaGestionar, setTorneoParaGestionar] = useState<Torneo | null>(null);
-  const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] = useState(false);
+  const [torneoSeleccionado, setTorneoSeleccionado] = useState<Torneo | null>(
+    null,
+  );
+  const [competenciaSeleccionada, setCompetenciaSeleccionada] = useState<
+    any | null
+  >(null);
+  const [torneoParaGestionar, setTorneoParaGestionar] = useState<Torneo | null>(
+    null,
+  );
+  const [isOrganizadorAutenticado, setIsOrganizadorAutenticado] =
+    useState(false);
   const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
 
   // Handlers para actualizar y eliminar parejas en Firestore
   const handleCambiarEstadoPago = async (
-  parejaId: string,
-  nuevoEstado: "APROBADO" | "RECHAZADO" | "PENDIENTE"
-) => {
-  try {
-    const parejaRef = doc(db, "inscripciones", parejaId);
-    await updateDoc(parejaRef, {
-      estadoPago: nuevoEstado,
-    });
-  } catch (error) {
-    console.error("Error al actualizar estado de pago:", error);
-    alert("No se pudo actualizar el estado de pago.");
-  }
-};
+    parejaId: string,
+    nuevoEstado: "APROBADO" | "RECHAZADO" | "PENDIENTE",
+  ) => {
+    try {
+      const parejaRef = doc(db, "inscripciones", parejaId);
+      await updateDoc(parejaRef, {
+        estadoPago: nuevoEstado,
+      });
+    } catch (error) {
+      console.error("Error al actualizar estado de pago:", error);
+      alert("No se pudo actualizar el estado de pago.");
+    }
+  };
 
-const handleEliminarPareja = async (parejaId: string) => {
-  try {
-    const parejaRef = doc(db, "inscripciones", parejaId);
-    await deleteDoc(parejaRef);
-  } catch (error) {
-    console.error("Error al eliminar la pareja:", error);
-    alert("No se pudo eliminar la pareja.");
-  }
-};
+  const handleEliminarPareja = async (parejaId: string) => {
+    try {
+      const parejaRef = doc(db, "inscripciones", parejaId);
+      await deleteDoc(parejaRef);
+    } catch (error) {
+      console.error("Error al eliminar la pareja:", error);
+      alert("No se pudo eliminar la pareja.");
+    }
+  };
 
-  // Validación de Llave
+  // 1. Validación de Llave para Crear Nuevo Torneo
   const validarLlaveCreacion = async (llaveIngresada: string) => {
     const codigoLimpio = llaveIngresada.trim();
 
@@ -78,7 +95,7 @@ const handleEliminarPareja = async (parejaId: string) => {
     try {
       const qLlave = query(
         collection(db, "llaves_organizadores"),
-        where("codigo", "==", codigoLimpio)
+        where("codigo", "==", codigoLimpio),
       );
       const snapLlave = await getDocs(qLlave);
 
@@ -95,48 +112,78 @@ const handleEliminarPareja = async (parejaId: string) => {
         return;
       }
 
-      const organizadorId = llaveData.organizadorId;
-      let telefonoOrganizador = "";
-      let nombreOrganizador = llaveData.nombreOrganizador || "";
-
-      if (organizadorId) {
-        try {
-          const orgRef = doc(db, "organizadores", organizadorId);
-          const orgSnap = await getDoc(orgRef);
-
-          if (orgSnap.exists()) {
-            const orgData = orgSnap.data();
-            telefonoOrganizador =
-              orgData.telefono ||
-              orgData.celular ||
-              orgData.contacto ||
-              "";
-
-            if (!nombreOrganizador) {
-              nombreOrganizador = orgData.nombreCompleto || "";
-            }
-          }
-        } catch (errOrg) {
-          console.warn("No se pudieron consultar los detalles extras del organizador:", errOrg);
-        }
-      }
-
       setLlaveCreacion(codigoLimpio);
       setOrganizadorLogueado({
-        id: organizadorId || llaveDoc.id,
-        telefono: telefonoOrganizador,
-        nombreCompleto: nombreOrganizador,
+        id: llaveData.organizadorId || llaveDoc.id,
+        telefono: llaveData.telefono || "",
+        nombreCompleto: llaveData.nombreCompleto || "",
       });
       setIsOrganizadorValidoParaCrear(true);
-
     } catch (err) {
-      console.error("Error al validar la llave de organizador:", err);
+      console.error("Error al validar llave de creación:", err);
       alert("Ocurrió un error al verificar la llave.");
     }
   };
 
+  // 2. Validación de Llave para Gestionar Torneo existente
+  const validarLlaveGestion = async (llaveIngresada: string) => {
+    const codigoLimpio = llaveIngresada.trim();
+
+    if (!codigoLimpio) {
+      alert("Por favor ingresá una llave.");
+      return;
+    }
+
+    if (!torneoParaGestionar) return;
+
+    try {
+      const qLlave = query(
+        collection(db, "llaves_organizadores"),
+        where("codigo", "==", codigoLimpio),
+      );
+      const snapLlave = await getDocs(qLlave);
+
+      if (snapLlave.empty) {
+        alert("La llave ingresada no existe.");
+        return;
+      }
+
+      const llaveDoc = snapLlave.docs[0];
+      const llaveData = llaveDoc.data();
+
+      if (llaveData.estado && llaveData.estado !== "activa") {
+        alert("Esta llave de organizador ya no se encuentra activa.");
+        return;
+      }
+
+      const organizadorId = llaveData.organizadorId || llaveDoc.id;
+      const coincideOrganizador =
+        organizadorId === torneoParaGestionar.organizadorId ||
+        codigoLimpio === torneoParaGestionar.organizadorLlaveId ||
+        llaveDoc.id === torneoParaGestionar.organizadorLlaveId;
+
+      if (!coincideOrganizador) {
+        alert("Esta llave no corresponde al organizador de este torneo.");
+        return;
+      }
+
+      setLlaveCreacion(codigoLimpio);
+      setIsOrganizadorAutenticado(true);
+    } catch (err) {
+      console.error("Error al validar llave de gestión:", err);
+      alert("Ocurrió un error al verificar la llave.");
+    }
+  };
+
+  const handleAbrirCrearModal = () => {
+    setIsOrganizadorValidoParaCrear(false);
+    setLlaveCreacion("");
+    setOrganizadorLogueado(null);
+    setIsCrearModalOpen(true);
+  };
+
   const torneosFiltrados = torneos.filter((t) =>
-    filtroEstado === "TODOS" ? true : t.estado === filtroEstado
+    filtroEstado === "TODOS" ? true : t.estado === filtroEstado,
   );
 
   return (
@@ -153,7 +200,7 @@ const handleEliminarPareja = async (parejaId: string) => {
         </div>
 
         <button
-          onClick={() => setIsCrearModalOpen(true)}
+          onClick={handleAbrirCrearModal}
           className="bg-fox-neon hover:bg-emerald-400 text-fox-bg font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-fox-glow cursor-pointer"
         >
           ➕ Crear Nuevo Torneo
@@ -186,7 +233,9 @@ const handleEliminarPareja = async (parejaId: string) => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16">
           <div className="w-8 h-8 border-2 border-fox-neon border-t-transparent rounded-full animate-spin mb-3"></div>
-          <p className="text-slate-400 text-sm font-medium">Cargando torneos...</p>
+          <p className="text-slate-400 text-sm font-medium">
+            Cargando torneos...
+          </p>
         </div>
       ) : torneosFiltrados.length === 0 ? (
         <div className="bg-fox-surface/50 border border-fox-border/60 rounded-2xl p-12 text-center max-w-md mx-auto my-8">
@@ -209,20 +258,23 @@ const handleEliminarPareja = async (parejaId: string) => {
         </div>
       )}
 
-      {/* Modales de Gestión y Creación */}
+      {/* 1. Modal para pedir llave al Crear Torneo */}
       {isCrearModalOpen && !isOrganizadorValidoParaCrear && (
         <IngresoLlaveModal
           titulo="Validación de Organizador"
-          subtitulo="Ingresá tu llave autorizada para crear torneos"
+          subtitulo="Ingresá tu llave autorizada para crear un torneo"
           onValidar={validarLlaveCreacion}
           onClose={() => setIsCrearModalOpen(false)}
         />
       )}
 
+      {/* Formulario de Creación de Torneo (si la llave fue válida) */}
       {isCrearModalOpen && isOrganizadorValidoParaCrear && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-fox-surface border border-fox-border rounded-2xl max-w-2xl w-full p-6 text-slate-100 max-h-[90vh] overflow-y-auto shadow-2xl">
-            <h2 className="text-xl font-bold mb-4 text-fox-neon">Crear Nuevo Torneo</h2>
+            <h2 className="text-xl font-bold mb-4 text-fox-neon">
+              Crear Nuevo Torneo
+            </h2>
             <TorneoForm
               circuitos={circuitos}
               organizadorLlaveId={llaveCreacion}
@@ -243,12 +295,37 @@ const handleEliminarPareja = async (parejaId: string) => {
         </div>
       )}
 
-      {/* Modal interactivo de Detalles e Inscripción */}
+      {/* 2. Modal de Llave para Gestionar Torneo */}
+      {torneoParaGestionar && !isOrganizadorAutenticado && (
+        <IngresoLlaveModal
+          titulo="Gestionar Torneo"
+          subtitulo={`Ingresá la llave de organizador para ${torneoParaGestionar.nombre}`}
+          onValidar={validarLlaveGestion}
+          onClose={() => setTorneoParaGestionar(null)}
+        />
+      )}
+
+      {/* Panel de Gestión del Torneo */}
+      {torneoParaGestionar && isOrganizadorAutenticado && (
+        <TorneoGestionPanel
+          torneo={torneoParaGestionar}
+          competencias={competencias}
+          parejas={parejas}
+          onClose={() => {
+            setTorneoParaGestionar(null);
+            setIsOrganizadorAutenticado(false);
+          }}
+          onCambiarEstadoPago={handleCambiarEstadoPago}
+          onEliminarPareja={handleEliminarPareja}
+        />
+      )}
+
+      {/* Modales de Detalles e Inscripción */}
       {torneoSeleccionado && (
         <TorneoDetalleModal
           torneo={torneoSeleccionado}
           competencias={competencias.filter(
-            (c: any) => c.torneoId === torneoSeleccionado.id
+            (c: any) => c.torneoId === torneoSeleccionado.id,
           )}
           onClose={() => setTorneoSeleccionado(null)}
           onInscribirCompetencia={(comp: any) => {
@@ -271,40 +348,17 @@ const handleEliminarPareja = async (parejaId: string) => {
             ...competenciaSeleccionada,
             aliasPago:
               competenciaSeleccionada.aliasPago ||
-              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)?.datosPago?.alias ||
-              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)?.aliasPago ||
-              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)?.alias,
+              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)
+                ?.datosPago?.alias ||
+              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)
+                ?.aliasPago ||
+              torneos.find((t) => t.id === competenciaSeleccionada.torneoId)
+                ?.alias,
           }}
           onClose={() => setCompetenciaSeleccionada(null)}
           onSuccess={() => {
             setCompetenciaSeleccionada(null);
           }}
-        />
-      )}
-
-      {torneoParaGestionar && !isOrganizadorAutenticado && (
-        <IngresoLlaveModal
-          titulo="Gestionar Torneo"
-          subtitulo={`Ingresá la llave de organizador para ${torneoParaGestionar.nombre}`}
-          onValidar={(llave) => {
-            if (llave.length >= 4) setIsOrganizadorAutenticado(true);
-            else alert("Llave incorrecta.");
-          }}
-          onClose={() => setTorneoParaGestionar(null)}
-        />
-      )}
-
-      {torneoParaGestionar && isOrganizadorAutenticado && (
-        <TorneoGestionPanel
-          torneo={torneoParaGestionar}
-          competencias={competencias}
-          parejas={parejas}
-          onClose={() => {
-            setTorneoParaGestionar(null);
-            setIsOrganizadorAutenticado(false);
-          }}
-          onCambiarEstadoPago={handleCambiarEstadoPago}
-          onEliminarPareja={handleEliminarPareja}
         />
       )}
     </div>
