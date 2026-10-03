@@ -42,29 +42,29 @@ export const TorneosPage: React.FC = () => {
 
   // Handlers para actualizar y eliminar parejas en Firestore
   const handleCambiarEstadoPago = async (
-    parejaId: string,
-    nuevoEstado: "APROBADO" | "RECHAZADO" | "PENDIENTE"
-  ) => {
-    try {
-      const parejaRef = doc(db, "parejas", parejaId);
-      await updateDoc(parejaRef, {
-        estadoPago: nuevoEstado,
-      });
-    } catch (error) {
-      console.error("Error al actualizar estado de pago:", error);
-      alert("No se pudo actualizar el estado de pago.");
-    }
-  };
+  parejaId: string,
+  nuevoEstado: "APROBADO" | "RECHAZADO" | "PENDIENTE"
+) => {
+  try {
+    const parejaRef = doc(db, "inscripciones", parejaId);
+    await updateDoc(parejaRef, {
+      estadoPago: nuevoEstado,
+    });
+  } catch (error) {
+    console.error("Error al actualizar estado de pago:", error);
+    alert("No se pudo actualizar el estado de pago.");
+  }
+};
 
-  const handleEliminarPareja = async (parejaId: string) => {
-    try {
-      const parejaRef = doc(db, "parejas", parejaId);
-      await deleteDoc(parejaRef);
-    } catch (error) {
-      console.error("Error al eliminar la pareja:", error);
-      alert("No se pudo eliminar la pareja.");
-    }
-  };
+const handleEliminarPareja = async (parejaId: string) => {
+  try {
+    const parejaRef = doc(db, "inscripciones", parejaId);
+    await deleteDoc(parejaRef);
+  } catch (error) {
+    console.error("Error al eliminar la pareja:", error);
+    alert("No se pudo eliminar la pareja.");
+  }
+};
 
   // Validación de Llave
   const validarLlaveCreacion = async (llaveIngresada: string) => {

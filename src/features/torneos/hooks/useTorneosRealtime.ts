@@ -29,9 +29,18 @@ export const useTorneosRealtime = () => {
       setCircuitos(lista);
     });
 
-    const unsubParejas = onSnapshot(collection(db, "parejas"), (snap) => {
+    // Escucha la colección 'inscripciones'
+    const unsubInscripciones = onSnapshot(collection(db, "inscripciones"), (snap) => {
       const lista: any[] = [];
-      snap.forEach((doc) => lista.push({ id: doc.id, ...doc.data() }));
+      snap.forEach((doc) => {
+        const data = doc.data();
+        lista.push({
+          id: doc.id,
+          ...data,
+          competenciaId: String(data.competenciaId || ""),
+          estadoPago: (data.estadoPago || "PENDIENTE").toUpperCase(),
+        });
+      });
       setParejas(lista);
     });
 
@@ -39,7 +48,7 @@ export const useTorneosRealtime = () => {
       unsubTorneos();
       unsubCompetencias();
       unsubCircuitos();
-      unsubParejas();
+      unsubInscripciones();
     };
   }, []);
 

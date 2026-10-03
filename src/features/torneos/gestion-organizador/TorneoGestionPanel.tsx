@@ -85,8 +85,16 @@ export const TorneoGestionPanel: React.FC<TorneoGestionPanelProps> = ({
           {tabActiva === "inscriptos" && (
             <TorneoInscriptosTab
               competencias={competencias}
-              parejas={parejas}
-              onCambiarEstadoPago={onCambiarEstadoPago}
+              parejas={parejas as any}
+              onCambiarEstadoPago={
+                onCambiarEstadoPago
+                  ? (id, estado) =>
+                      onCambiarEstadoPago(
+                        id,
+                        estado as "APROBADO" | "RECHAZADO" | "PENDIENTE",
+                      )
+                  : undefined
+              }
               onEliminarPareja={onEliminarPareja}
             />
           )}
