@@ -33,9 +33,25 @@ export const useInscripcionPareja = (competencia: any, onSuccess: () => void) =>
   const [loadingGuardado, setLoadingGuardado] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Fallbacks para datos de la competencia
-  const precioCalculado = competencia?.precioInscripcion || competencia?.precio || 0;
-  const aliasPago = competencia?.aliasPago || competencia?.alias || 'FOXREN.PADEL.MP';
+ 
+  // Fallbacks completos para cubrir cualquier nombre de campo usado en Firestore
+  const precioCalculado = Number(
+    competencia?.precioInscripcionBase || 
+    competencia?.precioInscripcion || 
+    competencia?.precio || 
+    competencia?.monto || 
+    competencia?.costo || 
+    competencia?.montoInscripcion || 
+    competencia?.costoInscripcion || 
+    competencia?.valor || 
+    0
+  );
+
+  const aliasPago = 
+    competencia?.aliasPago || 
+    competencia?.alias || 
+    competencia?.mpAlias || 
+    'FOXREN.PADEL.MP';
 
   const copiarAlias = () => {
     if (!aliasPago) return;
