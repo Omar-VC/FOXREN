@@ -11,3 +11,9 @@ export function faseEstaFinalizada(
 ): boolean {
   return fase.estado === "finalizada";
 }
+
+export function faseEstaPendiente(
+  fase: Fase
+): boolean {
+  return fase.estado === "pendiente";
+}

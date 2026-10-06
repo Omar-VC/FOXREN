@@ -1,68 +1,86 @@
-import type { Torneo } from '../../domain/torneo/torneo.types';
+// src/infrastructure/mappers/torneo.mapper.ts
 
-// Helper para convertir Timestamps de Firestore, objetos planos con segundos o objetos Date
-export const formatFechaFirestore = (fechaRaw: any): string => {
-  if (!fechaRaw) return 'A confirmar';
+import type { Torneo } from "../../domain/torneo/torneo.types";
 
-  // Si es un Timestamp de Firestore (tiene método toDate)
-  if (typeof fechaRaw === 'object' && typeof fechaRaw.toDate === 'function') {
-    return fechaRaw.toDate().toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+function convertirFechaFirestore(
+  fechaRaw: any
+): Date {
+  if (!fechaRaw) {
+    return new Date();
   }
 
-  // Si viene como objeto plano de Timestamp (con propiedad seconds)
-  if (typeof fechaRaw === 'object' && 'seconds' in fechaRaw) {
-    return new Date(fechaRaw.seconds * 1000).toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+  if (
+    typeof fechaRaw === "object" &&
+    typeof fechaRaw.toDate === "function"
+  ) {
+    return fechaRaw.toDate();
   }
 
-  // Si ya es un objeto Date
+  if (
+    typeof fechaRaw === "object" &&
+    "seconds" in fechaRaw
+  ) {
+    return new Date(fechaRaw.seconds * 1000);
+  }
+
   if (fechaRaw instanceof Date) {
-    return fechaRaw.toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    return fechaRaw;
   }
 
-  // Si viene como string
-  return String(fechaRaw);
-};
+  return new Date(fechaRaw);
+}
 
-export const mapDocToTorneo = (docId: string, data: any): Torneo => {
+export const mapDocToTorneo = (
+  docId: string,
+  data: any
+): Torneo => {
   return {
     id: docId,
-    nombre: data.nombre || 'Torneo sin nombre',
-    circuitoId: data.circuitoId || '',
-    sede: data.sede || 'Sede a confirmar',
-    premios: data.premios || 'A confirmar',
-    estado: data.estado || 'INSCRIPCION_ABIERTA',
-    validoParaRanking: Boolean(data.validoParaRanking),
-    fechaInicio: formatFechaFirestore(data.fechaInicio),
-    fechaFin: formatFechaFirestore(data.fechaFin),
-    fechaCreacion: formatFechaFirestore(data.fechaCreacion),
-    datosPago: {
-      alias: data.datosPago?.alias || data.alias || '',
-      cbu: data.datosPago?.cbu || data.cbu || '',
-      titular: data.datosPago?.titular || data.titular || '',
-    },
-    // Captura el teléfono o contacto desde cualquiera de sus variantes en Firestore
+    nombre: data.nombre ?? "Torneo sin nombre",
+    circuitoId: data.circuitoId ?? "",
+    complejoId: data.complejoId ?? "",
+    descripcion: data.descripcion ?? undefined,
+
+    fechaInicio: convertirFechaFirestore(
+      data.fechaInicio
+    ),
+
+    fechaFin: data.fechaFin
+      ? convertirFechaFirestore(data.fechaFin)
+      : undefined,
+
+    montoInscripcionPorPareja:
+      data.montoInscripcionPorPareja ?? undefined,
+
+    cupoMaximoParejas:
+      data.cupoMaximoParejas ?? undefined,
+
+    modalidad: data.modalidad ?? "presencial",
+
+    premios: data.premios ?? undefined,
+
+    reglamento:
+      data.reglamento ?? undefined,
+
     contactoOrganizador:
-      data.contactoOrganizador ||
-      data.telefonoOrganizador ||
-      data.telefono ||
-      data.celular ||
-      '',
-    organizadorLlaveId: data.organizadorLlaveId || '',
-    organizadorId: data.organizadorId || '',
-    comisionPorcentaje: data.comisionPorcentaje || 0,
-    gananciaEstimadaFoxren: data.gananciaEstimadaFoxren || 0,
-    modalidadPago: data.modalidadPago || 'POR_INSCRIPCION',
+      data.contactoOrganizador ??
+      data.telefonoOrganizador ??
+      data.telefono ??
+      data.celular ??
+      "",
+
+    imagenUrl:
+      data.imagenUrl ?? undefined,
+
+    estado:
+      data.estado ?? "pendiente",
+
+    puntajeRanking:
+      data.puntajeRanking ?? undefined,
+
+    fechaCreacion:
+      convertirFechaFirestore(
+        data.fechaCreacion
+      ),
   };
 };

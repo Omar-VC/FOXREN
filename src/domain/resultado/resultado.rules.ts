@@ -9,9 +9,21 @@ export function resultadoEsOficial(
 export function resultadoEsValido(
   resultado: Resultado
 ): boolean {
-  return (
-    resultado.partidoId.trim() !== "" &&
-    resultado.ganadorParejaId.trim() !== "" &&
-    resultado.sets.length > 0
-  );
+  if (!resultado.partidoId.trim()) {
+    return false;
+  }
+
+  if (!resultado.sets || resultado.sets.length === 0) {
+    return false;
+  }
+
+  if (
+    resultado.tipo !== "suspension" &&
+    (!resultado.ganadorParejaId ||
+      resultado.ganadorParejaId.trim() === "")
+  ) {
+    return false;
+  }
+
+  return true;
 }

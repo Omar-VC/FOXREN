@@ -1,11 +1,13 @@
 import type { Partido } from "../partido/partido.types";
 
-// ANTES: RondaLlave
-export type RondaCuadro = "CUARTOS" | "SEMIFINAL" | "FINAL";
+export type RondaCuadro =
+  | "OCTAVOS"
+  | "CUARTOS"
+  | "SEMIFINAL"
+  | "FINAL";
 
-// ANTES: LlavePartido
 export interface CuadroPartido extends Partido {
   ronda: RondaCuadro;
-  partidoSiguienteId?: string; 
-  posicionEnCuadro: number;    
+  partidoSiguienteId?: string;
+  posicionEnCuadro: number;
 }

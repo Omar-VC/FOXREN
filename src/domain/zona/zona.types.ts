@@ -1,6 +1,5 @@
 export interface TablaPosicionPareja {
   parejaId: string;
-  nombrePareja: string;
   partidosJugados: number;
   partidosGanados: number;
   partidosPerdidos: number;
@@ -16,7 +15,6 @@ export interface TablaPosicionPareja {
 export interface Zona {
   id: string;
   competenciaId: string;
-  nombre: string; // Ej: "Zona A"
+  nombre: string;
   parejasIds: string[];
-  posiciones?: TablaPosicionPareja[];
 }

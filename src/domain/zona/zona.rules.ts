@@ -1,81 +1,150 @@
-import type { Zona, TablaPosicionPareja } from "./zona.types";
+import type {
+  Zona,
+  TablaPosicionPareja,
+} from "./zona.types";
+
 import type { Partido } from "../partido/partido.types";
 import type { Pareja } from "../pareja/pareja.types";
 
-/**
- * Recibe las parejas APROBADAS y genera automáticamente las zonas y sus partidos Round Robin.
- */
+// ---------------------------------------------
+// Utilidad interna
+// ---------------------------------------------
+
+function mezclarParejas<T>(items: T[]): T[] {
+  const resultado = [...items];
+
+  for (let i = resultado.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [resultado[i], resultado[j]] = [
+      resultado[j],
+      resultado[i],
+    ];
+  }
+
+  return resultado;
+}
+
+// ---------------------------------------------
+// Generación de zonas
+// ---------------------------------------------
+
 export function generarZonasParaCompetencia(
   competenciaId: string,
   parejasAprobadas: Pareja[]
-): { zonas: Omit<Zona, "id">[]; partidos: Omit<Partido, "id">[] } {
+): {
+  zonas: Omit<Zona, "id">[];
+  partidos: Omit<Partido, "id">[];
+} {
   const totalParejas = parejasAprobadas.length;
+
   if (totalParejas < 3) {
-    throw new Error("Se requieren al menos 3 parejas aprobadas para armar zonas.");
+    throw new Error(
+      "Se requieren al menos 3 parejas aprobadas para armar zonas."
+    );
   }
 
-  // Determinar número de zonas (prioriza grupos de 3 o 4)
-  let numZonas = Math.floor(totalParejas / 3);
+  /*
+   * Priorizamos zonas de 3 o 4 parejas.
+   *
+   * Ejemplos:
+   * 6  → 2 zonas de 3
+   * 8  → 2 zonas de 4
+   * 9  → 3 zonas de 3
+   * 12 → 3 zonas de 4
+   */
+
+  let cantidadZonas: number;
+
   if (totalParejas % 4 === 0) {
-    numZonas = totalParejas / 4;
+    cantidadZonas = totalParejas / 4;
+  } else {
+    cantidadZonas = Math.ceil(totalParejas / 4);
+
+    while (
+      cantidadZonas > 1 &&
+      Math.floor(totalParejas / cantidadZonas) < 3
+    ) {
+      cantidadZonas--;
+    }
   }
 
-  // Mezclar parejas para sorteo aleatorio
-  const parejasShuffled = [...parejasAprobadas].sort(() => Math.random() - 0.5);
+  const parejasMezcladas = mezclarParejas(
+    parejasAprobadas
+  );
 
-  const zonasCreadas: Omit<Zona, "id">[] = [];
-  const partidosCreados: Omit<Partido, "id">[] = [];
+  const zonas: Omit<Zona, "id">[] = [];
 
-  // Crear estructuras de zonas
-  for (let i = 0; i < numZonas; i++) {
-    zonasCreadas.push({
+  for (let i = 0; i < cantidadZonas; i++) {
+    zonas.push({
       competenciaId,
       nombre: `Zona ${String.fromCharCode(65 + i)}`,
       parejasIds: [],
     });
   }
 
-  // Distribuir parejas equitativamente
-  parejasShuffled.forEach((p, idx) => {
-    const zonaIdx = idx % numZonas;
-    zonasCreadas[zonaIdx].parejasIds.push(p.id);
+  // Distribución equilibrada
+  parejasMezcladas.forEach((pareja, index) => {
+    const zonaIndex = index % cantidadZonas;
+
+    zonas[zonaIndex].parejasIds.push(
+      pareja.id
+    );
   });
 
-  // Generar enfrentamientos de cada zona
-  zonasCreadas.forEach((zona) => {
-    const ids = zona.parejasIds;
+  // Generación Round Robin
+  const partidos: Omit<Partido, "id">[] = [];
+
+  zonas.forEach((zona) => {
     let orden = 1;
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        partidosCreados.push({
+
+    for (
+      let i = 0;
+      i < zona.parejasIds.length;
+      i++
+    ) {
+      for (
+        let j = i + 1;
+        j < zona.parejasIds.length;
+        j++
+      ) {
+        partidos.push({
           competenciaId,
-          pareja1Id: ids[i],
-          pareja2Id: ids[j],
-          estado: "PENDIENTE",
+          zonaId: undefined,
+          pareja1Id: zona.parejasIds[i],
+          pareja2Id: zona.parejasIds[j],
+          estado: "pendiente",
           sets: [],
-          orden: orden++,
+          orden,
         });
+
+        orden++;
       }
     }
   });
 
-  return { zonas: zonasCreadas, partidos: partidosCreados };
+  return {
+    zonas,
+    partidos,
+  };
 }
 
-/**
- * Recalcula la tabla de posiciones oficial de una zona.
- */
+// ---------------------------------------------
+// Tabla de posiciones
+// ---------------------------------------------
+
 export function calcularTablaPosicionesZona(
   zona: Zona,
-  partidosZona: Partido[],
-  parejasMap: Record<string, string>
+  partidosZona: Partido[]
 ): TablaPosicionPareja[] {
-  const posicionesMap: Record<string, TablaPosicionPareja> = {};
+  const posicionesMap: Record<
+    string,
+    TablaPosicionPareja
+  > = {};
 
-  zona.parejasIds.forEach((id) => {
-    posicionesMap[id] = {
-      parejaId: id,
-      nombrePareja: parejasMap[id] || "Pareja Desconocida",
+  zona.parejasIds.forEach((parejaId) => {
+    posicionesMap[parejaId] = {
+      parejaId,
       partidosJugados: 0,
       partidosGanados: 0,
       partidosPerdidos: 0,
@@ -89,52 +158,114 @@ export function calcularTablaPosicionesZona(
     };
   });
 
-  partidosZona.forEach((p) => {
-    if (p.estado !== "FINALIZADO" && p.estado !== "WALKOVER") return;
+  partidosZona.forEach((partido) => {
+    const partidoValido =
+      partido.estado === "finalizado" ||
+      partido.estado === "walkover" ||
+      partido.estado === "abandono";
 
-    const stats1 = posicionesMap[p.pareja1Id];
-    const stats2 = posicionesMap[p.pareja2Id];
-    if (!stats1 || !stats2) return;
-
-    stats1.partidosJugados += 1;
-    stats2.partidosJugados += 1;
-
-    if (p.ganadorParejaId === p.pareja1Id) {
-      stats1.partidosGanados += 1;
-      stats1.puntos += 2;
-      stats2.partidosPerdidos += 1;
-      stats2.puntos += 1;
-    } else if (p.ganadorParejaId === p.pareja2Id) {
-      stats2.partidosGanados += 1;
-      stats2.puntos += 2;
-      stats1.partidosPerdidos += 1;
-      stats1.puntos += 1;
+    if (!partidoValido) {
+      return;
     }
 
-    p.sets.forEach((s) => {
-      stats1.juegosGanados += s.juegosPareja1;
-      stats1.juegosPerdidos += s.juegosPareja2;
-      stats2.juegosGanados += s.juegosPareja2;
-      stats2.juegosPerdidos += s.juegosPareja1;
+    const pareja1 =
+      posicionesMap[partido.pareja1Id];
 
-      if (s.juegosPareja1 > s.juegosPareja2) {
-        stats1.setsGanados += 1;
-        stats2.setsPerdidos += 1;
-      } else if (s.juegosPareja2 > s.juegosPareja1) {
-        stats2.setsGanados += 1;
-        stats1.setsPerdidos += 1;
+    const pareja2 =
+      posicionesMap[partido.pareja2Id];
+
+    if (!pareja1 || !pareja2) {
+      return;
+    }
+
+    pareja1.partidosJugados++;
+    pareja2.partidosJugados++;
+
+    if (
+      partido.ganadorParejaId ===
+      partido.pareja1Id
+    ) {
+      pareja1.partidosGanados++;
+      pareja2.partidosPerdidos++;
+
+      pareja1.puntos += 2;
+      pareja2.puntos += 1;
+    }
+
+    if (
+      partido.ganadorParejaId ===
+      partido.pareja2Id
+    ) {
+      pareja2.partidosGanados++;
+      pareja1.partidosPerdidos++;
+
+      pareja2.puntos += 2;
+      pareja1.puntos += 1;
+    }
+
+    partido.sets.forEach((set) => {
+      pareja1.juegosGanados +=
+        set.juegosPareja1;
+
+      pareja1.juegosPerdidos +=
+        set.juegosPareja2;
+
+      pareja2.juegosGanados +=
+        set.juegosPareja2;
+
+      pareja2.juegosPerdidos +=
+        set.juegosPareja1;
+
+      if (
+        set.juegosPareja1 >
+        set.juegosPareja2
+      ) {
+        pareja1.setsGanados++;
+        pareja2.setsPerdidos++;
+      }
+
+      if (
+        set.juegosPareja2 >
+        set.juegosPareja1
+      ) {
+        pareja2.setsGanados++;
+        pareja1.setsPerdidos++;
       }
     });
-
-    stats1.diferenciaSets = stats1.setsGanados - stats1.setsPerdidos;
-    stats1.diferenciaJuegos = stats1.juegosGanados - stats1.juegosPerdidos;
-    stats2.diferenciaSets = stats2.setsGanados - stats2.setsPerdidos;
-    stats2.diferenciaJuegos = stats2.juegosGanados - stats2.juegosPerdidos;
   });
 
-  return Object.values(posicionesMap).sort((a, b) => {
-    if (b.puntos !== a.puntos) return b.puntos - a.puntos;
-    if (b.diferenciaSets !== a.diferenciaSets) return b.diferenciaSets - a.diferenciaSets;
-    return b.diferenciaJuegos - a.diferenciaJuegos;
-  });
+  Object.values(posicionesMap).forEach(
+    (posicion) => {
+      posicion.diferenciaSets =
+        posicion.setsGanados -
+        posicion.setsPerdidos;
+
+      posicion.diferenciaJuegos =
+        posicion.juegosGanados -
+        posicion.juegosPerdidos;
+    }
+  );
+
+  return Object.values(posicionesMap).sort(
+    (a, b) => {
+      if (b.puntos !== a.puntos) {
+        return b.puntos - a.puntos;
+      }
+
+      if (
+        b.diferenciaSets !==
+        a.diferenciaSets
+      ) {
+        return (
+          b.diferenciaSets -
+          a.diferenciaSets
+        );
+      }
+
+      return (
+        b.diferenciaJuegos -
+        a.diferenciaJuegos
+      );
+    }
+  );
 }

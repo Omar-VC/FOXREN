@@ -14,9 +14,10 @@ export const competenciaMapper = {
       fechaFin: competencia.fechaFin,
       genero: competencia.genero,
       cupoMaximoParejas: competencia.cupoMaximoParejas,
-      precioInscripcionBase: competencia.precioInscripcionBase,
-      feeFoxrenPorPareja: competencia.feeFoxrenPorPareja ?? 0,
-      parejasClasificanPorZona: competencia.parejasClasificanPorZona ?? 2,
+      precioInscripcionPorPareja:
+        competencia.precioInscripcionPorPareja,
+      parejasClasificanPorZona:
+        competencia.parejasClasificanPorZona ?? 2,
     };
   },
 
@@ -27,14 +28,21 @@ export const competenciaMapper = {
       nombre: doc.nombre,
       descripcion: doc.descripcion ?? undefined,
       categoriaId: doc.categoriaId,
-      estado: doc.estado || "inscripciones_abiertas",
-      fechaInicio: doc.fechaInicio?.toDate ? doc.fechaInicio.toDate() : new Date(doc.fechaInicio),
-      fechaFin: doc.fechaFin?.toDate ? doc.fechaFin.toDate() : new Date(doc.fechaFin),
-      genero: doc.genero || "MASCULINO",
-      cupoMaximoParejas: doc.cupoMaximoParejas || 16,
-      precioInscripcionBase: doc.precioInscripcionBase || 0,
-      feeFoxrenPorPareja: doc.feeFoxrenPorPareja || 0,
-      parejasClasificanPorZona: doc.parejasClasificanPorZona || 2,
+      estado:
+        doc.estado ?? "inscripciones_abiertas",
+      fechaInicio: doc.fechaInicio?.toDate
+        ? doc.fechaInicio.toDate()
+        : new Date(doc.fechaInicio),
+      fechaFin: doc.fechaFin?.toDate
+        ? doc.fechaFin.toDate()
+        : new Date(doc.fechaFin),
+      genero: doc.genero ?? "MASCULINO",
+      cupoMaximoParejas:
+        doc.cupoMaximoParejas ?? 16,
+      precioInscripcionPorPareja:
+        doc.precioInscripcionPorPareja ?? 0,
+      parejasClasificanPorZona:
+        doc.parejasClasificanPorZona ?? 2,
     };
   },
 };

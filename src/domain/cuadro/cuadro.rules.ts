@@ -1,66 +1,98 @@
 import type { TablaPosicionPareja } from "../zona/zona.types";
-import type { CuadroPartido, RondaCuadro } from "./cuadro.types";
+import type {
+  CuadroPartido,
+  RondaCuadro,
+} from "./cuadro.types";
+
+function obtenerRondaInicial(
+  cantidadClasificados: number
+): RondaCuadro {
+  if (cantidadClasificados <= 2) {
+    return "FINAL";
+  }
+
+  if (cantidadClasificados <= 4) {
+    return "SEMIFINAL";
+  }
+
+  return "CUARTOS";
+}
+
+function crearPartidoCuadro(
+  competenciaId: string,
+  pareja1Id: string,
+  pareja2Id: string,
+  ronda: RondaCuadro,
+  posicionEnCuadro: number
+): CuadroPartido {
+  return {
+    id: "",
+    competenciaId,
+    pareja1Id,
+    pareja2Id,
+    estado: "pendiente",
+    sets: [],
+    orden: posicionEnCuadro,
+    ronda,
+    posicionEnCuadro,
+  };
+}
 
 export function generarCuadroEliminatorio(
   competenciaId: string,
-  clasificadosPorZona: { zonaNombre: string; clasificados: TablaPosicionPareja[] }[]
+  clasificadosPorZona: {
+    zonaNombre: string;
+    clasificados: TablaPosicionPareja[];
+  }[]
 ): CuadroPartido[] {
-  const primeros = clasificadosPorZona.map((z) => z.clasificados[0]).filter(Boolean);
-  const segundos = clasificadosPorZona.map((z) => z.clasificados[1]).filter(Boolean);
+  const clasificados: TablaPosicionPareja[] =
+    clasificadosPorZona.flatMap(
+      (zona) => zona.clasificados
+    );
 
-  const totalClasificados = primeros.length + segundos.length;
-  let rondaInicial: RondaCuadro = "SEMIFINAL";
-
-  if (totalClasificados > 4) {
-    rondaInicial = "CUARTOS";
-  }
-
-  // ANTES: partidosLlave
-  const partidosCuadro: CuadroPartido[] = [];
-
-  if (rondaInicial === "SEMIFINAL") {
-    partidosCuadro.push(
-      {
-        id: `semi_1_${Date.now()}`,
-        competenciaId,
-        orden: 1,
-        pareja1Id: primeros[0]?.parejaId || "",
-        pareja2Id: segundos[1]?.parejaId || segundos[0]?.parejaId || "",
-        nombrePareja1: primeros[0]?.nombrePareja || "1° Zona A",
-        nombrePareja2: segundos[1]?.nombrePareja || segundos[0]?.nombrePareja || "2° Zona B",
-        sets: [],
-        estado: "PENDIENTE",
-        ronda: "SEMIFINAL",
-        posicionEnCuadro: 1,
-      },
-      {
-        id: `semi_2_${Date.now()}`,
-        competenciaId,
-        orden: 2,
-        pareja1Id: primeros[1]?.parejaId || "",
-        pareja2Id: segundos[0]?.parejaId || "",
-        nombrePareja1: primeros[1]?.nombrePareja || "1° Zona B",
-        nombrePareja2: segundos[0]?.nombrePareja || "2° Zona A",
-        sets: [],
-        estado: "PENDIENTE",
-        ronda: "SEMIFINAL",
-        posicionEnCuadro: 2,
-      },
-      {
-        id: `final_${Date.now()}`,
-        competenciaId,
-        orden: 3,
-        pareja1Id: "",
-        pareja2Id: "",
-        nombrePareja1: "Ganador Semi 1",
-        nombrePareja2: "Ganador Semi 2",
-        sets: [],
-        estado: "PENDIENTE",
-        ronda: "FINAL",
-        posicionEnCuadro: 3,
-      }
+  if (clasificados.length < 2) {
+    throw new Error(
+      "Se necesitan al menos 2 parejas clasificadas para generar el cuadro."
     );
   }
 
-  return partidosCuadro;
+  const rondaInicial = obtenerRondaInicial(
+    clasificados.length
+  );
+
+  const partidos: CuadroPartido[] = [];
+
+  /*
+   * Por ahora generamos los cruces iniciales
+   * tomando las parejas clasificadas en orden.
+   *
+   * La distribución definitiva de cruces
+   * entre zonas se definirá en el motor
+   * de competencia.
+   */
+
+  for (
+    let i = 0;
+    i < clasificados.length - 1;
+    i += 2
+  ) {
+    const pareja1 = clasificados[i];
+    const pareja2 = clasificados[i + 1];
+
+    if (!pareja1 || !pareja2) {
+      continue;
+    }
+
+    partidos.push(
+      crearPartidoCuadro(
+        competenciaId,
+        pareja1.parejaId,
+        pareja2.parejaId,
+        rondaInicial,
+        partidos.length + 1
+      )
+    );
+  }
+
+  return partidos;
 }

@@ -11,3 +11,14 @@ export function rankingTienePuntos(
 ): boolean {
   return ranking.puntos > 0;
 }
+
+export function rankingEsValido(
+  ranking: RankingJugador
+): boolean {
+  return (
+    ranking.jugadorId.trim() !== "" &&
+    ranking.temporada.trim() !== "" &&
+    ranking.puntos >= 0 &&
+    ranking.posicion > 0
+  );
+}

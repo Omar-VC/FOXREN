@@ -5,20 +5,17 @@ export type EstadoSolicitudRegistro =
 
 export interface SolicitudRegistro {
   id: string;
-
   nombre: string;
   apellido: string;
   apodo?: string;
-
   dni: string;
-  ciudad: string;
   sexo: "masculino" | "femenino";
-
-  nivelInicial: "iniciado" | "intermedio" | "avanzado";
+  ciudad: string;
+  provincia: string;
+  fechaNacimiento?: Date;
   ladoJuego: "drive" | "reves";
-
+  categoriaDeclarada: string;
   estado: EstadoSolicitudRegistro;
-
   fechaSolicitud: Date;
   fechaResolucion?: Date;
 }

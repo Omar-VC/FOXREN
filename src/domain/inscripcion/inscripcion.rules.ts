@@ -1,14 +1,28 @@
 import type { Inscripcion } from "./inscripcion.types";
 
-export const esInscripcionConfirmada = (inscripcion: Inscripcion): boolean => {
-  return inscripcion.estado === "APROBADO" || inscripcion.estado === "confirmada";
-};
+export function esInscripcionConfirmada(
+  inscripcion: Inscripcion
+): boolean {
+  return inscripcion.estado === "confirmada";
+}
 
-export const esInscripcionValida = (inscripcion: Inscripcion): boolean => {
+export function esInscripcionPendiente(
+  inscripcion: Inscripcion
+): boolean {
+  return inscripcion.estado === "pendiente";
+}
+
+export function esInscripcionValida(
+  inscripcion: Inscripcion
+): boolean {
   return (
-    inscripcion.estado === "PENDIENTE" ||
     inscripcion.estado === "pendiente" ||
-    inscripcion.estado === "APROBADO" ||
     inscripcion.estado === "confirmada"
   );
-};
+}
+
+export function esInscripcionCancelada(
+  inscripcion: Inscripcion
+): boolean {
+  return inscripcion.estado === "cancelada";
+}

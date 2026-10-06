@@ -1,11 +1,25 @@
-// src/domain/torneo/torneo.rules.ts
-import type { Torneo } from './torneo.types';
+import type { Torneo } from "./torneo.types";
 
-export const esTorneoAprobado = (torneo: Torneo): boolean => {
-  if (!torneo) return false;
-  return torneo.estado === 'APROBADO';
-};
+// ---------------------------------------------
+// Verificaciones de estado
+// ---------------------------------------------
 
-export const torneoPendienteAprobacion = (torneo: Torneo): boolean => {
-  return torneo?.estado === 'PENDIENTE_APROBACION';
-};
+export function torneoEstaPublicado(torneo: Torneo): boolean {
+  return torneo.estado === "publicado";
+}
+
+export function torneoEstaEnCurso(torneo: Torneo): boolean {
+  return torneo.estado === "en_curso";
+}
+
+export function torneoEstaFinalizado(torneo: Torneo): boolean {
+  return torneo.estado === "finalizado";
+}
+
+export function torneoEstaCancelado(torneo: Torneo): boolean {
+  return torneo.estado === "cancelado";
+}
+
+export function torneoPuedePublicarse(torneo: Torneo): boolean {
+  return torneo.estado === "pendiente";
+}

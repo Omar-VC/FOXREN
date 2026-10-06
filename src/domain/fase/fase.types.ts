@@ -9,13 +9,9 @@ export type EstadoFase =
 
 export interface Fase {
   id: string;
-
   competenciaId: string;
-
   nombre: string;
   tipo: TipoFase;
-
   orden: number;
-
   estado: EstadoFase;
 }

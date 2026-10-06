@@ -1,3 +1,5 @@
+// src/infrastructure/mappers/jugador.mapper.ts
+
 import type { Jugador } from "../../domain/jugador/jugador.types";
 
 // Convierte Jugador → Firestore
@@ -8,13 +10,14 @@ export const toFirestoreJugador = (jugador: Jugador) => {
     apellido: jugador.apellido,
     apodo: jugador.apodo ?? null,
     dni: jugador.dni,
-    ciudad: jugador.ciudad,
     sexo: jugador.sexo,
-    nivelInicial: jugador.nivelInicial,
+    ciudad: jugador.ciudad,
+    provincia: jugador.provincia,
+    fechaNacimiento: jugador.fechaNacimiento ?? null,
     ladoJuego: jugador.ladoJuego,
-    categoriaId: jugador.categoriaId,
-    estado: jugador.estado ?? "activo",
-    categoriaDeclarada: jugador.categoriaDeclarada ?? "", // 👈 agregado
+    categoriaDeclarada: jugador.categoriaDeclarada,
+    categoriaId: jugador.categoriaId ?? null,
+    estado: jugador.estado,
   };
 };
 
@@ -26,13 +29,23 @@ export const fromFirestoreJugador = (doc: any): Jugador => {
     apellido: doc.apellido,
     apodo: doc.apodo ?? undefined,
     dni: doc.dni,
-    ciudad: doc.ciudad,
     sexo: doc.sexo,
-    nivelInicial: doc.nivelInicial,
+    ciudad: doc.ciudad,
+    provincia: doc.provincia,
+    fechaNacimiento: doc.fechaNacimiento?.toDate
+      ? doc.fechaNacimiento.toDate()
+      : doc.fechaNacimiento
+        ? new Date(doc.fechaNacimiento)
+        : undefined,
     ladoJuego: doc.ladoJuego,
-    categoriaId: doc.categoriaId,
-    estado: doc.estado ?? "activo",
-    categoriaDeclarada: doc.categoriaDeclarada ?? "", // 👈 corregido
+    categoriaDeclarada: doc.categoriaDeclarada ?? "",
+    categoriaId: doc.categoriaId ?? undefined,
+    estado: doc.estado ?? "pendiente",
+    fechaRegistro: doc.fechaRegistro?.toDate
+      ? doc.fechaRegistro.toDate()
+      : doc.fechaRegistro
+        ? new Date(doc.fechaRegistro)
+        : new Date(),
   };
 };
 

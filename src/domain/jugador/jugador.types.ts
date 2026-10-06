@@ -1,29 +1,43 @@
-export type Sexo = "masculino" | "femenino";
+export type Sexo =
+  | "masculino"
+  | "femenino";
 
-export type NivelInicial = "iniciado" | "intermedio" | "avanzado";
+export type LadoJuego =
+  | "drive"
+  | "reves";
 
-export type LadoJuego = "drive" | "reves";
-
-// ahora incluye pendiente y rechazado
-export type EstadoJugador = "activo" | "inactivo" | "pendiente" | "rechazado";
+export type EstadoJugador =
+  | "pendiente"
+  | "activo"
+  | "inactivo"
+  | "rechazado";
 
 export interface Jugador {
   id: string;
 
+  dni: string;
+
   nombre: string;
+
   apellido: string;
+
   apodo?: string;
 
-  dni: string;
-  ciudad: string;
   sexo: Sexo;
 
-  nivelInicial: NivelInicial;
+  ciudad: string;
+
+  provincia: string;
+
+  fechaNacimiento?: Date;
+
   ladoJuego: LadoJuego;
 
-  categoriaId: string;          // asignada por admin
-  categoriaDeclarada: string;   // 👈 nueva: declarada por el jugador
+  categoriaDeclarada: string;
+
+  categoriaId?: string;
 
   estado: EstadoJugador;
-  fechaRegistro?: Date;         // opcional si lo querés tipar
+
+  fechaRegistro: Date;
 }

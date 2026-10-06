@@ -1,5 +1,3 @@
-// src/domain/competencia/competencia.types.ts
-
 export type EstadoCompetencia =
   | "borrador"
   | "inscripciones_abiertas"
@@ -8,7 +6,10 @@ export type EstadoCompetencia =
   | "finalizada"
   | "cancelada";
 
-export type GeneroCompetencia = "MASCULINO" | "FEMENINO" | "MIXTO";
+export type GeneroCompetencia =
+  | "MASCULINO"
+  | "FEMENINO"
+  | "MIXTO";
 
 export interface Competencia {
   id: string;
@@ -16,23 +17,22 @@ export interface Competencia {
   torneoId: string;
 
   nombre: string;
+
   descripcion?: string;
 
-  categoriaId: string; // Ej: ID de 4ta, 5ta, Suma 11, etc.
+  categoriaId: string;
+
+  genero: GeneroCompetencia;
 
   estado: EstadoCompetencia;
 
   fechaInicio: Date;
+
   fechaFin: Date;
 
-  // --- Parámetros Configurables para la Competencia ---
-  genero: GeneroCompetencia;
+  cupoMaximoParejas: number;
 
-  cupoMaximoParejas: number; // Ej: 12, 16, 24, 32
+  precioInscripcionPorPareja: number;
 
-  precioInscripcionBase: number; // Valor que cobra el organizador por pareja
-
-  feeFoxrenPorPareja?: number; // Comisión/Canon de plataforma por pareja inscripta
-
-  parejasClasificanPorZona?: number; // Ej: 2 parejas clasifican por cada grupo a playoffs
+  parejasClasificanPorZona?: number;
 }
