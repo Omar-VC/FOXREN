@@ -11,6 +11,7 @@ export const COLLECTIONS = {
   competencias: "competencias",
   categorias: "categorias",
   inscripciones: "inscripciones",
+  parejas: "parejas",
 
   zonas: "zonas",
   partidos: "partidos",
