@@ -15,8 +15,11 @@ export const COLLECTIONS = {
 
   zonas: "zonas",
   partidos: "partidos",
+  resultados: "resultados",
+  parejas: "parejas",
 
   rankings: "rankings",
+  historial: "historial",
 } as const;
 
 export const ZONAS_COLLECTION = COLLECTIONS.zonas;

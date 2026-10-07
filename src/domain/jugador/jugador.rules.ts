@@ -11,15 +11,3 @@ export function jugadorEstaInactivo(
 ): boolean {
   return jugador.estado === "inactivo";
 }
-
-export function jugadorEstaPendiente(
-  jugador: Jugador
-): boolean {
-  return jugador.estado === "pendiente";
-}
-
-export function jugadorEstaRechazado(
-  jugador: Jugador
-): boolean {
-  return jugador.estado === "rechazado";
-}

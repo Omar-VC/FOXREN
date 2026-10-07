@@ -6,10 +6,9 @@ export type EstadoCompetencia =
   | "finalizada"
   | "cancelada";
 
-export type GeneroCompetencia =
-  | "MASCULINO"
-  | "FEMENINO"
-  | "MIXTO";
+export type GeneroCompetencia = "MASCULINO" | "FEMENINO" | "MIXTO";
+
+export type TipoReglaCategoria = "individual" | "suma";
 
 export interface Competencia {
   id: string;
@@ -21,6 +20,10 @@ export interface Competencia {
   descripcion?: string;
 
   categoriaId: string;
+
+  tipoReglaCategoria: TipoReglaCategoria;
+
+  valorReglaCategoria: number;
 
   genero: GeneroCompetencia;
 

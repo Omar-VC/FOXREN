@@ -2,11 +2,7 @@ export type Sexo = "masculino" | "femenino";
 
 export type LadoJuego = "drive" | "reves";
 
-export type EstadoJugador =
-  | "pendiente"
-  | "activo"
-  | "inactivo"
-  | "rechazado";
+export type EstadoJugador = "activo" | "inactivo";
 
 export interface Jugador {
   id: string;

@@ -42,7 +42,7 @@ export default function JugadorForm({
   const [categoriaDeclarada, setCategoriaDeclarada] = useState(
     jugador.categoriaDeclarada,
   );
-  const [estado, setEstado] = useState(jugador.estado);
+  
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -61,7 +61,7 @@ export default function JugadorForm({
         : {}),
       ladoJuego,
       categoriaDeclarada,
-      estado,
+      
     });
   }
 
@@ -158,20 +158,7 @@ export default function JugadorForm({
         />
       </div>
 
-      <div>
-        <label>Estado</label>
-        <select
-          value={estado}
-          onChange={(event) =>
-            setEstado(event.target.value as Jugador["estado"])
-          }
-        >
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="rechazado">Rechazado</option>
-        </select>
-      </div>
+      
 
       <button type="submit" disabled={guardando}>
         {guardando ? "Guardando..." : "Guardar cambios"}
