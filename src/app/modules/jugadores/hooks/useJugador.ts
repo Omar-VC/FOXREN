@@ -8,6 +8,7 @@ export function useJugador(id: string | undefined) {
   const [jugador, setJugador] = useState<Jugador | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
   async function cargarJugador() {
     if (!id) {
@@ -21,8 +22,7 @@ export function useJugador(id: string | undefined) {
       setCargando(true);
       setError(null);
 
-      const datos =
-        await jugadoresRepository.obtenerJugadorPorId(id);
+      const datos = await jugadoresRepository.obtenerJugadorPorId(id);
 
       if (!datos) {
         setJugador(null);
@@ -38,6 +38,32 @@ export function useJugador(id: string | undefined) {
     }
   }
 
+  async function actualizarJugador(datos: Partial<Jugador>) {
+    if (!id) {
+      throw new Error("Jugador no encontrado.");
+    }
+
+    try {
+      setGuardando(true);
+      setError(null);
+
+      await jugadoresRepository.actualizarJugador(id, datos);
+
+      const jugadorActualizado =
+        await jugadoresRepository.obtenerJugadorPorId(id);
+
+      setJugador(jugadorActualizado);
+    } catch (error) {
+      console.error("ERROR REAL AL ACTUALIZAR JUGADOR:", error);
+
+      setError("No se pudo actualizar el jugador.");
+
+      throw error;
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   useEffect(() => {
     cargarJugador();
   }, [id]);
@@ -46,5 +72,7 @@ export function useJugador(id: string | undefined) {
     jugador,
     cargando,
     error,
+    guardando,
+    actualizarJugador,
   };
 }
