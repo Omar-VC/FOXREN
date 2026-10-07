@@ -1,8 +1,8 @@
-// src/infrastructure/repositories/circuitosRepository.ts
-
 import {
-  collection,
   addDoc,
+  collection,
+  getDoc,
+  doc,
   getDocs,
   Timestamp,
 } from "firebase/firestore";
@@ -13,16 +13,8 @@ import { COLLECTIONS } from "../firebase/collections";
 import type { Circuito } from "../../domain/circuito/circuito.types";
 
 export const circuitosRepository = {
-  /**
-   * Obtiene todos los circuitos registrados.
-   */
   async obtenerCircuitos(): Promise<Circuito[]> {
-    const snap = await getDocs(
-      collection(
-        db,
-        COLLECTIONS.circuitos || "circuitos"
-      )
-    );
+    const snap = await getDocs(collection(db, COLLECTIONS.circuitos));
 
     return snap.docs.map((docSnap) => ({
       id: docSnap.id,
@@ -30,11 +22,23 @@ export const circuitosRepository = {
     })) as Circuito[];
   },
 
-  /**
-   * Crea un nuevo circuito.
-   */
+  async obtenerCircuitoPorId(circuitoId: string): Promise<Circuito | null> {
+    const ref = doc(db, COLLECTIONS.circuitos, circuitoId);
+
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      return null;
+    }
+
+    return {
+      id: snap.id,
+      ...snap.data(),
+    } as Circuito;
+  },
+
   async crearCircuito(
-    datos: Omit<Circuito, "id" | "fechaCreacion">
+    datos: Omit<Circuito, "id" | "fechaCreacion">,
   ): Promise<string> {
     const nuevoCircuito = {
       ...datos,
@@ -43,11 +47,8 @@ export const circuitosRepository = {
     };
 
     const docRef = await addDoc(
-      collection(
-        db,
-        COLLECTIONS.circuitos || "circuitos"
-      ),
-      nuevoCircuito
+      collection(db, COLLECTIONS.circuitos),
+      nuevoCircuito,
     );
 
     return docRef.id;

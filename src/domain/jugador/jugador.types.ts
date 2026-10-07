@@ -1,10 +1,6 @@
-export type Sexo =
-  | "masculino"
-  | "femenino";
+export type Sexo = "masculino" | "femenino";
 
-export type LadoJuego =
-  | "drive"
-  | "reves";
+export type LadoJuego = "drive" | "reves";
 
 export type EstadoJugador =
   | "pendiente"

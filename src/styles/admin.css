@@ -1,0 +1,80 @@
+.admin-layout {
+  min-height: 100vh;
+  background: var(--color-bg-main);
+}
+
+.admin-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  padding: 1rem 2rem;
+}
+
+.admin-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.admin-brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-nav a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: 0.2s ease;
+}
+
+.admin-nav a:hover {
+  color: var(--color-text-main);
+  background: var(--color-bg-card);
+}
+
+.admin-logout {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.admin-logout:hover {
+  color: var(--color-text-main);
+  border-color: var(--color-text-muted);
+}
+
+.admin-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.admin-page-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  color: var(--color-text-main);
+}
+
+.admin-page-description {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.admin-nav a.active {
+  color: var(--color-text-main);
+  background: var(--color-bg-card);
+}

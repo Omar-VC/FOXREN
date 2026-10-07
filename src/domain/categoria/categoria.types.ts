@@ -1,6 +1,4 @@
-export type EstadoCategoria =
-  | "activa"
-  | "inactiva";
+export type EstadoCategoria = "activa" | "inactiva";
 
 export interface Categoria {
   id: string;

@@ -1,4 +1,4 @@
-import type { SolicitudRegistro } from "./solicitud-registro.types";
+import type { SolicitudRegistro } from "./solicitudRegistro.types";
 
 export function solicitudEstaPendiente(
   solicitud: SolicitudRegistro
