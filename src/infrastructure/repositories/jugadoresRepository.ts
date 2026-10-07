@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   updateDoc,
@@ -44,6 +45,21 @@ export const jugadoresRepository = {
     return {
       id: docSnap.id,
       ...docSnap.data(),
+    } as Jugador;
+  },
+
+  async obtenerJugadorPorId(id: string): Promise<Jugador | null> {
+    const jugadorRef = doc(db, COLLECTIONS.jugadores, id);
+
+    const snapshot = await getDoc(jugadorRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return {
+      id: snapshot.id,
+      ...snapshot.data(),
     } as Jugador;
   },
 

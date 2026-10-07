@@ -1,5 +1,6 @@
 import { useJugadores } from "../hooks/useJugadores";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function AdminJugadoresPage() {
   const { jugadores, cargando, error } = useJugadores();
@@ -45,23 +46,25 @@ export default function AdminJugadoresPage() {
       {!cargando && jugadoresFiltrados.length > 0 && (
         <div>
           {jugadoresFiltrados.map((jugador) => (
-            <article key={jugador.id}>
-              <h2>
-                {jugador.nombre} {jugador.apellido}
-              </h2>
+            <Link key={jugador.id} to={`/admin/jugadores/${jugador.id}`}>
+              <article>
+                <h2>
+                  {jugador.nombre} {jugador.apellido}
+                </h2>
 
-              <p>DNI: {jugador.dni}</p>
+                <p>DNI: {jugador.dni}</p>
 
-              <p>
-                Ciudad: {jugador.ciudad}, {jugador.provincia}
-              </p>
+                <p>
+                  Ciudad: {jugador.ciudad}, {jugador.provincia}
+                </p>
 
-              <p>Categoría: {jugador.categoriaDeclarada}</p>
+                <p>Categoría: {jugador.categoriaDeclarada}</p>
 
-              <p>Lado: {jugador.ladoJuego}</p>
+                <p>Lado: {jugador.ladoJuego}</p>
 
-              <p>Estado: {jugador.estado}</p>
-            </article>
+                <p>Estado: {jugador.estado}</p>
+              </article>
+            </Link>
           ))}
         </div>
       )}
