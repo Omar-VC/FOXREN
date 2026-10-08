@@ -10,6 +10,7 @@ import AdminCategoriasPage from "../../modules/categorias/pages/AdminCategoriasP
 import AdminSolicitudesRegistroPage from "../../modules/unirse/pages/AdminSolicitudesRegistroPage";
 import AdminJugadoresPage from "../../modules/jugadores/pages/AdminJugadoresPage";
 import AdminJugadorDetallePage from "../../modules/jugadores/pages/AdminJugadorDetallePage";
+import CompetenciaAdminPage from "../../modules/torneos/pages/CompetenciaAdminPage";
 
 export default function AdminRoutes() {
   return (
@@ -26,6 +27,10 @@ export default function AdminRoutes() {
         <Route path="/" element={<AdminInicioPage />} />
         <Route path="/circuitos" element={<AdminCircuitosPage />} />
         <Route path="/torneos" element={<AdminTorneosPage />} />
+        <Route
+          path="/torneos/:torneoId/competencias/:competenciaId"
+          element={<CompetenciaAdminPage />}
+        />
         <Route path="/jugadores" element={<AdminJugadoresPage />} />
         <Route path="/jugadores/:id" element={<AdminJugadorDetallePage />} />
         <Route path="/ranking" element={<div>Administrar ranking</div>} />
