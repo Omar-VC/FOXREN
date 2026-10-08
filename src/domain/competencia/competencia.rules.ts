@@ -1,5 +1,6 @@
 import type { Competencia } from "./competencia.types";
 import type { Jugador } from "../jugador/jugador.types";
+import type { Pareja } from "../pareja/pareja.types";
 import { obtenerValorCategoriaJugador } from "../jugador/categoriaJugador";
 // ---------------------------------------------
 // Verificaciones de estado
@@ -162,4 +163,164 @@ export function parejaPuedeParticiparEnCompetencia(
     categoriaJugador2,
     competencia.valorReglaCategoria,
   );
+}
+
+export function competenciaPuedePasarA(
+  competencia: Competencia,
+  nuevoEstado: Competencia["estado"],
+): boolean {
+  const estadoActual = competencia.estado;
+
+  if (
+    estadoActual === "borrador" &&
+    nuevoEstado === "inscripciones_abiertas"
+  ) {
+    return true;
+  }
+
+  if (
+    estadoActual === "inscripciones_abiertas" &&
+    nuevoEstado === "inscripciones_cerradas"
+  ) {
+    return true;
+  }
+
+  if (
+    estadoActual === "inscripciones_cerradas" &&
+    nuevoEstado === "en_curso"
+  ) {
+    return true;
+  }
+
+  if (
+    estadoActual === "en_curso" &&
+    nuevoEstado === "finalizada"
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+
+export interface ValidacionPreparacionCompetenciaResultado {
+  esValido: boolean;
+  errores: string[];
+}
+
+export function validarPreparacionCompetencia(
+  competencia: Competencia,
+  parejas: Pareja[],
+): ValidacionPreparacionCompetenciaResultado {
+  const errores: string[] = [];
+
+  if (competencia.estado !== "inscripciones_abiertas") {
+    errores.push(
+      "La competencia debe tener las inscripciones abiertas para poder prepararse.",
+    );
+  }
+
+  const parejasActivas = parejas.filter(
+    (pareja) => pareja.estado === "activa",
+  );
+
+  if (parejasActivas.length === 0) {
+    errores.push(
+      "La competencia debe tener al menos una pareja registrada.",
+    );
+  }
+
+  if (parejasActivas.length > competencia.cupoMaximoParejas) {
+    errores.push(
+      "La cantidad de parejas activas supera el cupo máximo de la competencia.",
+    );
+  }
+
+  const jugadoresRegistrados = new Set<string>();
+
+  for (const pareja of parejasActivas) {
+    if (jugadoresRegistrados.has(pareja.jugador1Id)) {
+      errores.push(
+        "Un jugador aparece en más de una pareja.",
+      );
+    }
+
+    if (jugadoresRegistrados.has(pareja.jugador2Id)) {
+      errores.push(
+        "Un jugador aparece en más de una pareja.",
+      );
+    }
+
+    jugadoresRegistrados.add(pareja.jugador1Id);
+    jugadoresRegistrados.add(pareja.jugador2Id);
+  }
+
+  return {
+    esValido: errores.length === 0,
+    errores,
+  };
+}
+
+export function validarParejasDeCompetencia(
+  competencia: Competencia,
+  parejas: Pareja[],
+  jugadores: Jugador[],
+): string[] {
+  const errores: string[] = [];
+
+  const jugadoresPorId = new Map(
+    jugadores.map((jugador) => [jugador.id, jugador]),
+  );
+
+  const parejasActivas = parejas.filter(
+    (pareja) => pareja.estado === "activa",
+  );
+
+  for (const pareja of parejasActivas) {
+    const jugador1 = jugadoresPorId.get(pareja.jugador1Id);
+    const jugador2 = jugadoresPorId.get(pareja.jugador2Id);
+
+    if (!jugador1 || !jugador2) {
+      errores.push(
+        `La pareja ${pareja.id} tiene un jugador que no existe.`,
+      );
+      continue;
+    }
+
+    if (
+      !jugadorPuedeParticiparEnCompetencia(
+        jugador1,
+        competencia,
+      )
+    ) {
+      errores.push(
+        `El jugador ${jugador1.nombre} ${jugador1.apellido} ya no cumple la regla de categoría.`,
+      );
+    }
+
+    if (
+      !jugadorPuedeParticiparEnCompetencia(
+        jugador2,
+        competencia,
+      )
+    ) {
+      errores.push(
+        `El jugador ${jugador2.nombre} ${jugador2.apellido} ya no cumple la regla de categoría.`,
+      );
+    }
+
+    if (
+      !parejaPuedeParticiparEnCompetencia(
+        jugador1,
+        jugador2,
+        competencia,
+      )
+    ) {
+      errores.push(
+        `La pareja formada por ${jugador1.nombre} ${jugador1.apellido} y ${jugador2.nombre} ${jugador2.apellido} ya no cumple la regla de categoría.`,
+      );
+    }
+  }
+
+  return errores;
 }

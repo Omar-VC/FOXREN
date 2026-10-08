@@ -39,6 +39,7 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
       cupoMaximoParejas,
       precioInscripcionPorPareja,
       tipoReglaCategoria,
+      formato: "zonas_eliminacion_directa",
       valorReglaCategoria,
     });
 
@@ -79,6 +80,16 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
         >
           <option value="individual">Individual</option>
           <option value="suma">Suma</option>
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="formato">Formato de competencia</label>
+
+        <select id="formato" value="zonas_eliminacion_directa" disabled>
+          <option value="zonas_eliminacion_directa">
+            Zonas + eliminación directa
+          </option>
         </select>
       </div>
 

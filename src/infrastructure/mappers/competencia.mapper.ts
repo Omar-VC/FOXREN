@@ -31,6 +31,7 @@ export const competenciaMapper = {
       tipoReglaCategoria: doc.tipoReglaCategoria ?? "individual",
       valorReglaCategoria: doc.valorReglaCategoria ?? 0,
       estado: doc.estado ?? "inscripciones_abiertas",
+      formato: doc.formato ?? "zonas_eliminacion_directa",
       fechaInicio: doc.fechaInicio?.toDate
         ? doc.fechaInicio.toDate()
         : new Date(doc.fechaInicio),

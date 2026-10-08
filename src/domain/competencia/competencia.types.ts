@@ -1,3 +1,6 @@
+import type { TipoFormatoCompetencia } from "./competencia.formato.types";
+
+
 export type EstadoCompetencia =
   | "borrador"
   | "inscripciones_abiertas"
@@ -22,6 +25,8 @@ export interface Competencia {
   categoriaId: string;
 
   tipoReglaCategoria: TipoReglaCategoria;
+
+  formato: TipoFormatoCompetencia;
 
   valorReglaCategoria: number;
 
