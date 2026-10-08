@@ -13,6 +13,9 @@ interface Props {
 
 export default function ParejasAdmin({ competenciaId }: Props) {
   const [parejas, setParejas] = useState<Pareja[]>([]);
+  const [jugadoresPorId, setJugadoresPorId] = useState<Record<string, Jugador>>(
+    {},
+  );
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +46,26 @@ export default function ParejasAdmin({ competenciaId }: Props) {
           await parejasRepository.obtenerPorCompetenciaId(competenciaId);
 
         setParejas(datos);
+
+        const idsJugadores = Array.from(
+          new Set(
+            datos.flatMap((pareja) => [pareja.jugador1Id, pareja.jugador2Id]),
+          ),
+        );
+
+        const jugadores = await Promise.all(
+          idsJugadores.map((id) => jugadoresRepository.obtenerJugadorPorId(id)),
+        );
+
+        const jugadoresEncontrados: Record<string, Jugador> = {};
+
+        jugadores.forEach((jugador) => {
+          if (jugador) {
+            jugadoresEncontrados[jugador.id] = jugador;
+          }
+        });
+
+        setJugadoresPorId(jugadoresEncontrados);
       } catch {
         setError("No se pudieron cargar las parejas.");
       } finally {
@@ -235,7 +258,13 @@ export default function ParejasAdmin({ competenciaId }: Props) {
         <ul>
           {parejas.map((pareja) => (
             <li key={pareja.id}>
-              {pareja.jugador1Id} / {pareja.jugador2Id}
+              {jugadoresPorId[pareja.jugador1Id]
+                ? `${jugadoresPorId[pareja.jugador1Id].nombre} ${jugadoresPorId[pareja.jugador1Id].apellido}`
+                : pareja.jugador1Id}
+              {" / "}
+              {jugadoresPorId[pareja.jugador2Id]
+                ? `${jugadoresPorId[pareja.jugador2Id].nombre} ${jugadoresPorId[pareja.jugador2Id].apellido}`
+                : pareja.jugador2Id}
               {" — "}
               {pareja.estado}
             </li>
