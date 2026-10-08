@@ -9,15 +9,15 @@ export const competenciaMapper = {
       nombre: competencia.nombre,
       descripcion: competencia.descripcion ?? null,
       categoriaId: competencia.categoriaId,
+      tipoReglaCategoria: competencia.tipoReglaCategoria,
+      valorReglaCategoria: competencia.valorReglaCategoria,
       estado: competencia.estado,
       fechaInicio: competencia.fechaInicio,
       fechaFin: competencia.fechaFin,
       genero: competencia.genero,
       cupoMaximoParejas: competencia.cupoMaximoParejas,
-      precioInscripcionPorPareja:
-        competencia.precioInscripcionPorPareja,
-      parejasClasificanPorZona:
-        competencia.parejasClasificanPorZona ?? 2,
+      precioInscripcionPorPareja: competencia.precioInscripcionPorPareja,
+      parejasClasificanPorZona: competencia.parejasClasificanPorZona ?? 2,
     };
   },
 
@@ -28,8 +28,9 @@ export const competenciaMapper = {
       nombre: doc.nombre,
       descripcion: doc.descripcion ?? undefined,
       categoriaId: doc.categoriaId,
-      estado:
-        doc.estado ?? "inscripciones_abiertas",
+      tipoReglaCategoria: doc.tipoReglaCategoria ?? "individual",
+      valorReglaCategoria: doc.valorReglaCategoria ?? 0,
+      estado: doc.estado ?? "inscripciones_abiertas",
       fechaInicio: doc.fechaInicio?.toDate
         ? doc.fechaInicio.toDate()
         : new Date(doc.fechaInicio),
@@ -37,12 +38,9 @@ export const competenciaMapper = {
         ? doc.fechaFin.toDate()
         : new Date(doc.fechaFin),
       genero: doc.genero ?? "MASCULINO",
-      cupoMaximoParejas:
-        doc.cupoMaximoParejas ?? 16,
-      precioInscripcionPorPareja:
-        doc.precioInscripcionPorPareja ?? 0,
-      parejasClasificanPorZona:
-        doc.parejasClasificanPorZona ?? 2,
+      cupoMaximoParejas: doc.cupoMaximoParejas ?? 16,
+      precioInscripcionPorPareja: doc.precioInscripcionPorPareja ?? 0,
+      parejasClasificanPorZona: doc.parejasClasificanPorZona ?? 2,
     };
   },
 };

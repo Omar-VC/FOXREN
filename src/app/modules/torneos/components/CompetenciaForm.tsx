@@ -12,6 +12,10 @@ interface Props {
 export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
   const [nombre, setNombre] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
+  const [tipoReglaCategoria, setTipoReglaCategoria] =
+    useState<Competencia["tipoReglaCategoria"]>("individual");
+
+  const [valorReglaCategoria, setValorReglaCategoria] = useState(0);
   const [genero, setGenero] = useState<Competencia["genero"]>("MASCULINO");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
@@ -34,6 +38,8 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
       fechaFin: new Date(fechaFin),
       cupoMaximoParejas,
       precioInscripcionPorPareja,
+      tipoReglaCategoria,
+      valorReglaCategoria,
     });
 
     setNombre("");
@@ -43,6 +49,8 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
     setFechaFin("");
     setCupoMaximoParejas(16);
     setPrecioInscripcionPorPareja(0);
+    setTipoReglaCategoria("individual");
+    setValorReglaCategoria(0);
   }
 
   return (
@@ -59,29 +67,79 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
       </div>
 
       <div>
-        <label>Categoría</label>
+        <label>Tipo de categoría</label>
 
         <select
-          value={categoriaId}
-          onChange={(event) => setCategoriaId(event.target.value)}
-          required
-          disabled={cargandoCategorias}
+          value={tipoReglaCategoria}
+          onChange={(event) =>
+            setTipoReglaCategoria(
+              event.target.value as Competencia["tipoReglaCategoria"],
+            )
+          }
         >
-          <option value="">
-            {cargandoCategorias
-              ? "Cargando categorías..."
-              : "Seleccionar categoría"}
-          </option>
-
-          {categorias
-            .filter((categoria) => categoria.estado === "activa")
-            .map((categoria) => (
-              <option key={categoria.id} value={categoria.id}>
-                {categoria.nombre}
-              </option>
-            ))}
+          <option value="individual">Individual</option>
+          <option value="suma">Suma</option>
         </select>
       </div>
+
+      {tipoReglaCategoria === "individual" && (
+        <div>
+          <label>Categoría</label>
+
+          <select
+            value={categoriaId}
+            onChange={(event) => {
+              const id = event.target.value;
+              setCategoriaId(id);
+
+              const categoriaSeleccionada = categorias.find(
+                (categoria) => categoria.id === id,
+              );
+
+              if (categoriaSeleccionada) {
+                const numero = parseInt(categoriaSeleccionada.nombre, 10);
+
+                if (!Number.isNaN(numero)) {
+                  setValorReglaCategoria(numero);
+                }
+              }
+            }}
+            required
+            disabled={cargandoCategorias}
+          >
+            <option value="">
+              {cargandoCategorias
+                ? "Cargando categorías..."
+                : "Seleccionar categoría"}
+            </option>
+
+            {categorias
+              .filter((categoria) => categoria.estado === "activa")
+              .map((categoria) => (
+                <option key={categoria.id} value={categoria.id}>
+                  {categoria.nombre}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
+
+      {tipoReglaCategoria === "suma" && (
+        <div>
+          <label>Suma de categorías</label>
+
+          <input
+            type="number"
+            min="1"
+            value={valorReglaCategoria || ""}
+            onChange={(event) =>
+              setValorReglaCategoria(Number(event.target.value))
+            }
+            placeholder="Ej: 13"
+            required
+          />
+        </div>
+      )}
 
       <div>
         <label>Género</label>

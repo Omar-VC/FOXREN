@@ -1,10 +1,22 @@
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  query,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+  Timestamp,
+} from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { COLLECTIONS } from "../firebase/collections";
-import type { Competencia, EstadoCompetencia } from "../../domain/competencia/competencia.types";
+import type {
+  Competencia,
+  EstadoCompetencia,
+} from "../../domain/competencia/competencia.types";
 import { competenciaMapper } from "../mappers/competencia.mapper";
-
-
 
 export const competenciasRepository = {
   async crearCompetencia(datos: Omit<Competencia, "id">): Promise<string> {
@@ -14,7 +26,7 @@ export const competenciasRepository = {
         ...datos,
         fechaInicio: Timestamp.fromDate(datos.fechaInicio || new Date()),
         fechaFin: Timestamp.fromDate(datos.fechaFin || new Date()),
-      }
+      },
     );
     return docRef.id;
   },
@@ -25,36 +37,69 @@ export const competenciasRepository = {
   async obtenerPorTorneoId(torneoId: string): Promise<Competencia[]> {
     const q = query(
       collection(db, COLLECTIONS.competencias || "competencias"),
-      where("torneoId", "==", torneoId)
+      where("torneoId", "==", torneoId),
     );
     const snap = await getDocs(q);
-    return snap.docs.map((doc) => competenciaMapper.fromFirestore(doc.id, doc.data()));
+    return snap.docs.map((doc) =>
+      competenciaMapper.fromFirestore(doc.id, doc.data()),
+    );
   },
 
-  async cambiarEstado(competenciaId: string, nuevoEstado: EstadoCompetencia): Promise<void> {
-    const docRef = doc(db, COLLECTIONS.competencias || "competencias", competenciaId);
+  async obtenerPorId(competenciaId: string): Promise<Competencia | null> {
+    const competenciaRef = doc(db, COLLECTIONS.competencias, competenciaId);
+
+    const snapshot = await getDoc(competenciaRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return competenciaMapper.fromFirestore(snapshot.id, snapshot.data());
+  },
+
+  async cambiarEstado(
+    competenciaId: string,
+    nuevoEstado: EstadoCompetencia,
+  ): Promise<void> {
+    const docRef = doc(
+      db,
+      COLLECTIONS.competencias || "competencias",
+      competenciaId,
+    );
     await updateDoc(docRef, {
       estado: nuevoEstado,
     });
   },
 };
 
-
 // Crear competencia
-export const crearCompetencia = async (competencia: Competencia): Promise<void> => {
-  await addDoc(collection(db, COLLECTIONS.competencias), competenciaMapper.toFirestore(competencia));
+export const crearCompetencia = async (
+  competencia: Competencia,
+): Promise<void> => {
+  await addDoc(
+    collection(db, COLLECTIONS.competencias),
+    competenciaMapper.toFirestore(competencia),
+  );
 };
 
 // Listar competencias
 export const listarCompetencias = async (): Promise<Competencia[]> => {
   const snapshot = await getDocs(collection(db, COLLECTIONS.competencias));
-  return snapshot.docs.map(docSnap => competenciaMapper.fromFirestore(docSnap.id, docSnap.data()));
+  return snapshot.docs.map((docSnap) =>
+    competenciaMapper.fromFirestore(docSnap.id, docSnap.data()),
+  );
 };
 
 // Actualizar competencia
-export const actualizarCompetencia = async (id: string, competencia: Partial<Competencia>): Promise<void> => {
+export const actualizarCompetencia = async (
+  id: string,
+  competencia: Partial<Competencia>,
+): Promise<void> => {
   const competenciaRef = doc(db, COLLECTIONS.competencias, id);
-  await updateDoc(competenciaRef, competenciaMapper.toFirestore({ ...competencia, id } as Competencia));
+  await updateDoc(
+    competenciaRef,
+    competenciaMapper.toFirestore({ ...competencia, id } as Competencia),
+  );
 };
 
 // Eliminar competencia
