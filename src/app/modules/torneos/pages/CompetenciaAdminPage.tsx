@@ -8,11 +8,12 @@ import ParejasAdmin from "../components/ParejasAdmin";
 export default function CompetenciaAdminPage() {
   const { torneoId, competenciaId } = useParams();
 
-  const [competencia, setCompetencia] =
-    useState<Competencia | null>(null);
+  const [competencia, setCompetencia] = useState<Competencia | null>(null);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
 
   useEffect(() => {
     async function cargarCompetencia() {
@@ -25,16 +26,11 @@ export default function CompetenciaAdminPage() {
       try {
         setError(null);
 
-        const datos =
-          await competenciasRepository.obtenerPorId(
-            competenciaId
-          );
+        const datos = await competenciasRepository.obtenerPorId(competenciaId);
 
         setCompetencia(datos);
       } catch {
-        setError(
-          "No se pudo cargar la competencia."
-        );
+        setError("No se pudo cargar la competencia.");
       } finally {
         setCargando(false);
       }
@@ -42,6 +38,31 @@ export default function CompetenciaAdminPage() {
 
     cargarCompetencia();
   }, [competenciaId]);
+
+  async function abrirInscripciones() {
+    if (!competencia) {
+      return;
+    }
+
+    try {
+      setCambiandoEstado(true);
+      setError(null);
+
+      await competenciasRepository.cambiarEstado(
+        competencia.id,
+        "inscripciones_abiertas",
+      );
+
+      setCompetencia({
+        ...competencia,
+        estado: "inscripciones_abiertas",
+      });
+    } catch {
+      setError("No se pudieron abrir las inscripciones.");
+    } finally {
+      setCambiandoEstado(false);
+    }
+  }
 
   if (cargando) {
     return <p>Cargando competencia...</p>;
@@ -58,20 +79,12 @@ export default function CompetenciaAdminPage() {
   return (
     <section>
       <p>
-        <Link
-          to={
-            torneoId
-              ? `/admin/torneos`
-              : "/admin/torneos"
-          }
-        >
+        <Link to={torneoId ? `/admin/torneos` : "/admin/torneos"}>
           ← Volver a torneos
         </Link>
       </p>
 
-      <h1 className="admin-page-title">
-        {competencia.nombre}
-      </h1>
+      <h1 className="admin-page-title">{competencia.nombre}</h1>
 
       <p className="admin-page-description">
         Centro operativo de la competencia.
@@ -81,18 +94,21 @@ export default function CompetenciaAdminPage() {
 
       <h2>Información</h2>
 
-      <p>
-        Estado: {competencia.estado}
-      </p>
+      <p>Estado: {competencia.estado}</p>
 
-      <p>
-        Género: {competencia.genero}
-      </p>
+      {competencia.estado === "borrador" && (
+        <button
+          type="button"
+          onClick={abrirInscripciones}
+          disabled={cambiandoEstado}
+        >
+          {cambiandoEstado ? "Abriendo..." : "Abrir inscripciones"}
+        </button>
+      )}
 
-      <p>
-        Cupo máximo:{" "}
-        {competencia.cupoMaximoParejas} parejas
-      </p>
+      <p>Género: {competencia.genero}</p>
+
+      <p>Cupo máximo: {competencia.cupoMaximoParejas} parejas</p>
 
       <hr />
 
@@ -105,17 +121,12 @@ export default function CompetenciaAdminPage() {
 
       <div>
         <h3>Partidos</h3>
-        <p>
-          Próximo paso: generar y administrar
-          partidos.
-        </p>
+        <p>Próximo paso: generar y administrar partidos.</p>
       </div>
 
       <div>
         <h3>Resultados</h3>
-        <p>
-          Próximo paso: cargar y validar resultados.
-        </p>
+        <p>Próximo paso: cargar y validar resultados.</p>
       </div>
     </section>
   );
