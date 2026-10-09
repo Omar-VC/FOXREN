@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-
+import ZonasCompetenciaAdmin from "./ZonasCompetenciaAdmin";
 import type { Competencia } from "../../../../domain/competencia/competencia.types";
 import ParejasAdmin from "../components/ParejasAdmin";
 import { competenciasRepository } from "../../../../infrastructure/repositories/competenciasRepository";
 import { cambiarEstadoCompetencia } from "../../../../application/competencias/cambiarEstadoCompetencia";
 import { prepararCompetencia } from "../../../../application/competencias/prepararCompetencia";
 import type { ResultadoPreparacionCompetencia } from "../../../../application/competencias/prepararCompetencia";
-import { generarZonasCompetencia } from "../../../../application/competencias/generarZonasCompetencia";
-
-import { zonasRepository } from "../../../../infrastructure/repositories/zonasRepository";
-
-import type { Zona } from "../../../../domain/competencia/competencia.zonas.types";
 
 export default function CompetenciaAdminPage() {
   const { torneoId, competenciaId } = useParams();
@@ -23,9 +18,7 @@ export default function CompetenciaAdminPage() {
   const [resultadoPreparacion, setResultadoPreparacion] =
     useState<ResultadoPreparacionCompetencia | null>(null);
   const [informeCopiado, setInformeCopiado] = useState(false);
-  const [zonas, setZonas] = useState<Zona[]>([]);
-  const [cantidadZonas, setCantidadZonas] = useState(2);
-  const [generandoZonas, setGenerandoZonas] = useState(false);
+  const [actualizacionParejas, setActualizacionParejas] = useState(0);
 
   useEffect(() => {
     async function cargarCompetencia() {
@@ -41,13 +34,6 @@ export default function CompetenciaAdminPage() {
         const datos = await competenciasRepository.obtenerPorId(competenciaId);
 
         setCompetencia(datos);
-        if (datos) {
-          const zonasGuardadas = await zonasRepository.obtenerPorCompetenciaId(
-            datos.id,
-          );
-
-          setZonas(zonasGuardadas);
-        }
       } catch {
         setError("No se pudo cargar la competencia.");
       } finally {
@@ -127,33 +113,6 @@ export default function CompetenciaAdminPage() {
       );
     } finally {
       setCambiandoEstado(false);
-    }
-  }
-
-  async function generarZonas() {
-    if (!competencia) {
-      return;
-    }
-
-    try {
-      setGenerandoZonas(true);
-      setError(null);
-
-      await generarZonasCompetencia(competencia.id, cantidadZonas);
-
-      const zonasGeneradas = await zonasRepository.obtenerPorCompetenciaId(
-        competencia.id,
-      );
-
-      setZonas(zonasGeneradas);
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudieron generar las zonas.",
-      );
-    } finally {
-      setGenerandoZonas(false);
     }
   }
 
@@ -346,81 +305,21 @@ export default function CompetenciaAdminPage() {
       <h2>Operación</h2>
       <div>
         <h3>Parejas</h3>
-        <ParejasAdmin competenciaId={competencia.id} />
+
+        <ParejasAdmin
+          competenciaId={competencia.id}
+          onParejaRegistrada={() => {
+            setActualizacionParejas((actual) => actual + 1);
+          }}
+        />
       </div>
-      ```tsx
-      <div>
-        <h3>Zonas</h3>
 
-        {competencia.estado !== "inscripciones_cerradas" &&
-          zonas.length === 0 && (
-            <p>
-              Para generar las zonas, primero debés cerrar las inscripciones.
-            </p>
-          )}
+      <ZonasCompetenciaAdmin
+        competenciaId={competencia.id}
+        inscripcionesCerradas={competencia.estado === "inscripciones_cerradas"}
+        actualizacion={actualizacionParejas}
+      />
 
-        {competencia.estado === "inscripciones_cerradas" &&
-          zonas.length === 0 && (
-            <>
-              <label htmlFor="cantidadZonas">Cantidad de zonas</label>
-
-              <select
-                id="cantidadZonas"
-                value={cantidadZonas}
-                onChange={(event) =>
-                  setCantidadZonas(Number(event.target.value))
-                }
-                disabled={generandoZonas}
-              >
-                {Array.from(
-                  {
-                    length: Math.floor(
-                      (resultadoPreparacion?.resumen.cantidadParejas ?? 0) / 2,
-                    ),
-                  },
-                  (_, index) => index + 1,
-                ).map((cantidad) => (
-                  <option key={cantidad} value={cantidad}>
-                    {cantidad} {cantidad === 1 ? "zona" : "zonas"}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={generarZonas}
-                disabled={generandoZonas}
-              >
-                {generandoZonas
-                  ? "Generando zonas..."
-                  : "Generar zonas automáticamente"}
-              </button>
-            </>
-          )}
-
-        {zonas.length > 0 && (
-          <>
-            <p>Zonas generadas: {zonas.length}</p>
-
-            {zonas
-              .slice()
-              .sort((a, b) => a.orden - b.orden)
-              .map((zona) => (
-                <div key={zona.id}>
-                  <h4>{zona.nombre}</h4>
-
-                  <p>Parejas: {zona.parejaIds.length}</p>
-
-                  <ol>
-                    {zona.parejaIds.map((parejaId) => (
-                      <li key={parejaId}>{parejaId}</li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-          </>
-        )}
-      </div>
       <div>
         <h3>Partidos</h3>
         <p>Próximo paso: generar y administrar partidos.</p>

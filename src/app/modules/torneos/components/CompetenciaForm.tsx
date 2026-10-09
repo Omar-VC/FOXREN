@@ -20,6 +20,9 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [cupoMaximoParejas, setCupoMaximoParejas] = useState(16);
+  const [formato, setFormato] = useState<Competencia["formato"]>(
+    "zonas_eliminacion_directa",
+  );
   const [precioInscripcionPorPareja, setPrecioInscripcionPorPareja] =
     useState(0);
 
@@ -39,7 +42,7 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
       cupoMaximoParejas,
       precioInscripcionPorPareja,
       tipoReglaCategoria,
-      formato: "zonas_eliminacion_directa",
+      formato,
       valorReglaCategoria,
     });
 
@@ -49,6 +52,7 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
     setFechaInicio("");
     setFechaFin("");
     setCupoMaximoParejas(16);
+    setFormato("zonas_eliminacion_directa");
     setPrecioInscripcionPorPareja(0);
     setTipoReglaCategoria("individual");
     setValorReglaCategoria(0);
@@ -85,11 +89,18 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
 
       <div>
         <label htmlFor="formato">Formato de competencia</label>
-
-        <select id="formato" value="zonas_eliminacion_directa" disabled>
+        <select
+          id="formato"
+          value={formato}
+          onChange={(event) =>
+            setFormato(event.target.value as Competencia["formato"])
+          }
+          disabled={creando}
+        >
           <option value="zonas_eliminacion_directa">
             Zonas + eliminación directa
           </option>
+          <option value="eliminacion_directa">Eliminación directa</option>
         </select>
       </div>
 

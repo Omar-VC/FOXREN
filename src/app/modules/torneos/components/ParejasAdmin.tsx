@@ -9,9 +9,13 @@ import { registrarPareja } from "../../../../application/parejas/registrarPareja
 
 interface Props {
   competenciaId: string;
+  onParejaRegistrada: () => void;
 }
 
-export default function ParejasAdmin({ competenciaId }: Props) {
+export default function ParejasAdmin({
+  competenciaId,
+  onParejaRegistrada,
+}: Props) {
   const [parejas, setParejas] = useState<Pareja[]>([]);
   const [jugadoresPorId, setJugadoresPorId] = useState<Record<string, Jugador>>(
     {},
@@ -138,20 +142,31 @@ export default function ParejasAdmin({ competenciaId }: Props) {
       return;
     }
 
+    const jugador1Seleccionado = jugador1;
+    const jugador2Seleccionado = jugador2;
+
     try {
       setRegistrando(true);
       setErrorRegistro(null);
 
       await registrarPareja({
         competenciaId,
-        jugador1Id: jugador1.id,
-        jugador2Id: jugador2.id,
+        jugador1Id: jugador1Seleccionado.id,
+        jugador2Id: jugador2Seleccionado.id,
       });
 
       const datos =
         await parejasRepository.obtenerPorCompetenciaId(competenciaId);
 
       setParejas(datos);
+
+      setJugadoresPorId((actuales) => ({
+        ...actuales,
+        [jugador1Seleccionado.id]: jugador1Seleccionado,
+        [jugador2Seleccionado.id]: jugador2Seleccionado,
+      }));
+
+      onParejaRegistrada();
 
       setDniJugador1("");
       setDniJugador2("");
