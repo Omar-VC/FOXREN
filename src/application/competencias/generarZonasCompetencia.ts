@@ -46,5 +46,5 @@ export async function generarZonasCompetencia(
     cantidadZonas,
   );
 
-  await zonasRepository.crearMuchas(zonas);
+  await zonasRepository.crearZonasYPartidos(zonas);
 }
