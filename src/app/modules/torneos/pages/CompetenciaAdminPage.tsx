@@ -30,9 +30,7 @@ export default function CompetenciaAdminPage() {
 
       try {
         setError(null);
-
         const datos = await competenciasRepository.obtenerPorId(competenciaId);
-
         setCompetencia(datos);
       } catch {
         setError("No se pudo cargar la competencia.");
@@ -45,16 +43,12 @@ export default function CompetenciaAdminPage() {
   }, [competenciaId]);
 
   async function abrirInscripciones() {
-    if (!competencia) {
-      return;
-    }
+    if (!competencia) return;
 
     try {
       setCambiandoEstado(true);
       setError(null);
-
       await cambiarEstadoCompetencia(competencia.id, "inscripciones_abiertas");
-
       setCompetencia({
         ...competencia,
         estado: "inscripciones_abiertas",
@@ -67,23 +61,19 @@ export default function CompetenciaAdminPage() {
   }
 
   async function preparar() {
-    if (!competencia) {
-      return;
-    }
+    if (!competencia) return;
 
     try {
       setPreparando(true);
       setError(null);
       setResultadoPreparacion(null);
-
       const resultado = await prepararCompetencia(competencia.id);
-
       setResultadoPreparacion(resultado);
-    } catch (error) {
+    } catch (err) {
       setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo verificar la competencia.",
+        err instanceof Error
+          ? err.message
+          : "No se pudo verificar la competencia."
       );
     } finally {
       setPreparando(false);
@@ -91,25 +81,21 @@ export default function CompetenciaAdminPage() {
   }
 
   async function cerrarInscripciones() {
-    if (!competencia || !resultadoPreparacion?.esValida) {
-      return;
-    }
+    if (!competencia || !resultadoPreparacion?.esValida) return;
 
     try {
       setCambiandoEstado(true);
       setError(null);
-
       await cambiarEstadoCompetencia(competencia.id, "inscripciones_cerradas");
-
       setCompetencia({
         ...competencia,
         estado: "inscripciones_cerradas",
       });
-    } catch (error) {
+    } catch (err) {
       setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudieron cerrar las inscripciones.",
+        err instanceof Error
+          ? err.message
+          : "No se pudieron cerrar las inscripciones."
       );
     } finally {
       setCambiandoEstado(false);
@@ -117,12 +103,9 @@ export default function CompetenciaAdminPage() {
   }
 
   async function copiarInforme() {
-    if (!competencia || !resultadoPreparacion) {
-      return;
-    }
+    if (!competencia || !resultadoPreparacion) return;
 
     setInformeCopiado(false);
-
     const resumen = resultadoPreparacion.resumen;
 
     const reglaCategoria =
@@ -136,7 +119,7 @@ export default function CompetenciaAdminPage() {
         : resultadoPreparacion.parejas
             .map(
               (pareja, index) =>
-                `${index + 1}. ${pareja.jugador1} / ${pareja.jugador2}`,
+                `${index + 1}. ${pareja.jugador1} / ${pareja.jugador2}`
             )
             .join("\n");
 
@@ -147,11 +130,9 @@ export default function CompetenciaAdminPage() {
     const erroresTexto =
       resultadoPreparacion.errores.length === 0
         ? ""
-        : [
-            "",
-            "Errores:",
-            ...resultadoPreparacion.errores.map((error) => `- ${error}`),
-          ].join("\n");
+        : ["", "Errores:", ...resultadoPreparacion.errores.map((e) => `- ${e}`)].join(
+            "\n"
+          );
 
     const informe = [
       "FOXREN — VERIFICACIÓN DE COMPETENCIA",
@@ -181,152 +162,209 @@ export default function CompetenciaAdminPage() {
   }
 
   if (cargando) {
-    return <p>Cargando competencia...</p>;
+    return (
+      <div className="py-8 text-center text-slate-400">
+        Cargando competencia...
+      </div>
+    );
   }
 
   if (error) {
-    return <p>{error}</p>;
+    return (
+      <div className="p-4 bg-red-950/50 border border-red-500/40 text-red-200 rounded-xl mb-4">
+        {error}
+      </div>
+    );
   }
 
   if (!competencia) {
-    return <p>Competencia no encontrada.</p>;
+    return <p className="text-slate-400">Competencia no encontrada.</p>;
   }
 
   return (
-    <section>
-      <p>
-        <Link to={torneoId ? `/admin/torneos` : "/admin/torneos"}>
+    <section className="space-y-6">
+      {/* Encabezado y Regreso */}
+      <div>
+        <Link
+          to={torneoId ? `/admin/torneos` : "/admin/torneos"}
+          className="text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors inline-block mb-3"
+        >
           ← Volver a torneos
         </Link>
-      </p>
-      <h1 className="admin-page-title">{competencia.nombre}</h1>
-      <p className="admin-page-description">
-        Centro operativo de la competencia.
-      </p>
-      <hr />
-      <h2>Información</h2>
-      <p>Estado: {competencia.estado}</p>
-      {competencia.estado === "borrador" && (
-        <button
-          type="button"
-          onClick={abrirInscripciones}
-          disabled={cambiandoEstado}
-        >
-          {cambiandoEstado ? "Abriendo..." : "Abrir inscripciones"}
-        </button>
-      )}
-      {competencia.estado === "inscripciones_abiertas" && (
-        <button type="button" onClick={preparar} disabled={preparando}>
-          {preparando ? "Verificando..." : "Verificar competencia"}
-        </button>
-      )}
-      {resultadoPreparacion && (
-        <>
-          <hr />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="admin-page-title">{competencia.nombre}</h1>
+            <p className="admin-page-description">
+              Centro operativo de la competencia.
+            </p>
+          </div>
 
-          <h2>Verificación de competencia</h2>
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              competencia.estado === "inscripciones_cerradas"
+                ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                : competencia.estado === "inscripciones_abiertas"
+                ? "bg-sky-950 text-sky-300 border border-sky-800"
+                : "bg-slate-800 text-slate-300 border border-slate-700"
+            }`}
+          >
+            {competencia.estado.replace("_", " ")}
+          </span>
+        </div>
+      </div>
+
+      {/* Tarjetas superiores de Estado e Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Detalle */}
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
+          <h2 className="text-lg font-semibold mb-3 text-slate-100">Información</h2>
+          <div className="space-y-1.5 text-sm text-slate-300">
+            <p><span className="text-slate-400">Género:</span> {competencia.genero}</p>
+            <p><span className="text-slate-400">Cupo máximo:</span> {competencia.cupoMaximoParejas} parejas</p>
+            <p>
+              <span className="text-slate-400">Regla de Categoría:</span>{" "}
+              {competencia.tipoReglaCategoria === "individual"
+                ? `Categoría ${competencia.valorReglaCategoria}ª`
+                : `Suma ${competencia.valorReglaCategoria}`}
+            </p>
+          </div>
+        </div>
+
+        {/* Acciones */}
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg flex flex-col justify-center">
+          <h2 className="text-lg font-semibold mb-3 text-slate-100">Acciones</h2>
+          {competencia.estado === "borrador" && (
+            <button
+              type="button"
+              onClick={abrirInscripciones}
+              disabled={cambiandoEstado}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {cambiandoEstado ? "Abriendo..." : "Abrir inscripciones"}
+            </button>
+          )}
+
+          {competencia.estado === "inscripciones_abiertas" && (
+            <button
+              type="button"
+              onClick={preparar}
+              disabled={preparando}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {preparando ? "Verificando..." : "Verificar competencia"}
+            </button>
+          )}
+
+          {competencia.estado === "inscripciones_cerradas" && (
+            <p className="text-emerald-400 text-sm font-medium">
+              ✓ Inscripciones cerradas. La competencia se encuentra lista para el sorteo de zonas.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Bloque de Verificación (si está activo) */}
+      {resultadoPreparacion && (
+        <div
+          className={`border rounded-[var(--border-radius)] p-5 ${
+            resultadoPreparacion.esValida
+              ? "bg-emerald-950/30 border-emerald-500/40 text-emerald-200"
+              : "bg-red-950/30 border-red-500/40 text-red-200"
+          }`}
+        >
+          <h2 className="text-lg font-bold mb-2">
+            {resultadoPreparacion.esValida
+              ? "✓ Competencia lista para cerrar inscripciones"
+              : "✗ Problemas a corregir"}
+          </h2>
 
           {resultadoPreparacion.esValida ? (
-            <>
-              <p>La competencia está lista para cerrar las inscripciones.</p>
-
-              <h3>Resumen</h3>
-
-              <ul>
+            <div className="space-y-3 text-sm">
+              <ul className="list-disc list-inside space-y-1 text-slate-300">
                 <li>
                   Parejas: {resultadoPreparacion.resumen.cantidadParejas} /{" "}
-                  {resultadoPreparacion.resumen.cupoMaximo}
-                </li>
-
-                <li>
-                  Cupos disponibles:{" "}
+                  {resultadoPreparacion.resumen.cupoMaximo} (Libres:{" "}
                   {resultadoPreparacion.resumen.cupoMaximo -
                     resultadoPreparacion.resumen.cantidadParejas}
+                  )
                 </li>
-
                 <li>Jugadores: {resultadoPreparacion.resumen.jugadores}</li>
-
-                <li>✓ Datos de competencia válidos</li>
-                <li>✓ Parejas registradas válidas</li>
-                <li>✓ Jugadores válidos</li>
-                <li>✓ Reglas de categoría verificadas</li>
-                <li>✓ Cupo disponible</li>
+                <li>✓ Datos, parejas y reglas validadas correctamente</li>
               </ul>
 
-              <h3>Parejas inscriptas</h3>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={copiarInforme}
+                  className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium text-xs py-2 px-3 rounded-lg transition-colors"
+                >
+                  {informeCopiado ? "✓ Copiado a WhatsApp" : "Copiar informe"}
+                </button>
 
-              {resultadoPreparacion.parejas.length === 0 ? (
-                <p>No hay parejas registradas.</p>
-              ) : (
-                <ol>
-                  {resultadoPreparacion.parejas.map((pareja, index) => (
-                    <li key={index}>
-                      {pareja.jugador1} / {pareja.jugador2}
-                    </li>
-                  ))}
-                </ol>
-              )}
-
-              <button type="button" onClick={copiarInforme}>
-                Copiar informe
-              </button>
-
-              {informeCopiado && (
-                <p>✓ Informe copiado. Ya podés pegarlo en WhatsApp.</p>
-              )}
-
-              <button
-                type="button"
-                onClick={cerrarInscripciones}
-                disabled={cambiandoEstado}
-              >
-                {cambiandoEstado ? "Cerrando..." : "Cerrar inscripciones"}
-              </button>
-            </>
+                <button
+                  type="button"
+                  onClick={cerrarInscripciones}
+                  disabled={cambiandoEstado}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs py-2 px-3 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {cambiandoEstado ? "Cerrando..." : "Cerrar inscripciones"}
+                </button>
+              </div>
+            </div>
           ) : (
-            <>
-              <p>
-                Se encontraron problemas que deben corregirse antes de cerrar
-                las inscripciones.
-              </p>
-
-              <ul>
-                {resultadoPreparacion.errores.map((error, index) => (
-                  <li key={index}>✗ {error}</li>
+            <div className="text-sm">
+              <p className="mb-2">Corregí las siguientes inconsistencias:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {resultadoPreparacion.errores.map((err, idx) => (
+                  <li key={idx}>✗ {err}</li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
-        </>
+        </div>
       )}
-      <p>Género: {competencia.genero}</p>
-      <p>Cupo máximo: {competencia.cupoMaximoParejas} parejas</p>
-      <hr />
-      <h2>Operación</h2>
-      <div>
-        <h3>Parejas</h3>
 
-        <ParejasAdmin
-          competenciaId={competencia.id}
-          onParejaRegistrada={() => {
-            setActualizacionParejas((actual) => actual + 1);
-          }}
-        />
+      {/* Módulos de Operación */}
+      <div className="pt-2">
+        <h2 className="text-xl font-semibold mb-4 text-slate-100 border-b border-[var(--color-border)] pb-2">
+          Operación
+        </h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
+            <h3 className="text-lg font-semibold mb-4 text-slate-200">Parejas</h3>
+            <ParejasAdmin
+              competenciaId={competencia.id}
+              onParejaRegistrada={() => {
+                setActualizacionParejas((actual) => actual + 1);
+              }}
+            />
+          </div>
+
+          <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
+            <h3 className="text-lg font-semibold mb-4 text-slate-200">Zonas</h3>
+            <ZonasCompetenciaAdmin
+              competenciaId={competencia.id}
+              inscripcionesCerradas={
+                competencia.estado === "inscripciones_cerradas"
+              }
+              actualizacion={actualizacionParejas}
+            />
+          </div>
+        </div>
       </div>
 
-      <ZonasCompetenciaAdmin
-        competenciaId={competencia.id}
-        inscripcionesCerradas={competencia.estado === "inscripciones_cerradas"}
-        actualizacion={actualizacionParejas}
-      />
+      {/* Partidos y Resultados */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div className="bg-slate-900/60 border border-dashed border-slate-700 rounded-[var(--border-radius)] p-4 text-slate-400">
+          <h4 className="font-medium text-slate-200 mb-1">Partidos</h4>
+          <p className="text-xs">Próximo paso: generar y administrar partidos.</p>
+        </div>
 
-      <div>
-        <h3>Partidos</h3>
-        <p>Próximo paso: generar y administrar partidos.</p>
-      </div>
-      <div>
-        <h3>Resultados</h3>
-        <p>Próximo paso: cargar y validar resultados.</p>
+        <div className="bg-slate-900/60 border border-dashed border-slate-700 rounded-[var(--border-radius)] p-4 text-slate-400">
+          <h4 className="font-medium text-slate-200 mb-1">Resultados</h4>
+          <p className="text-xs">Próximo paso: cargar y validar resultados.</p>
+        </div>
       </div>
     </section>
   );
