@@ -17,6 +17,9 @@ import { partidosRepository } from "../../../../infrastructure/repositories/part
 import { parejasRepository } from "../../../../infrastructure/repositories/parejasRepository";
 import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
 import { zonasRepository } from "../../../../infrastructure/repositories/zonasRepository";
+import { registrarResultado } from "../../../../application/resultados/registrarResultado";
+import type { TipoResultado } from "../../../../domain/resultado/resultado.types";
+import type { SetResultado } from "../../../../domain/partido/partido.types";
 
 export default function CompetenciaAdminPage() {
   const { torneoId, competenciaId } = useParams();
@@ -37,6 +40,34 @@ export default function CompetenciaAdminPage() {
   const [cargandoPartidos, setCargandoPartidos] = useState(true);
   const [errorPartidos, setErrorPartidos] = useState<string | null>(null);
   const [actualizacionPartidos, setActualizacionPartidos] = useState(0);
+  const [partidoSeleccionadoId, setPartidoSeleccionadoId] = useState("");
+  const [tipoResultado, setTipoResultado] = useState<TipoResultado>("normal");
+  const [cantidadSets, setCantidadSets] = useState<2 | 3>(2);
+  const [marcadores, setMarcadores] = useState([
+    {
+      juegosPareja1: "",
+      juegosPareja2: "",
+      tieBreakPareja1: "",
+      tieBreakPareja2: "",
+    },
+    {
+      juegosPareja1: "",
+      juegosPareja2: "",
+      tieBreakPareja1: "",
+      tieBreakPareja2: "",
+    },
+    {
+      juegosPareja1: "",
+      juegosPareja2: "",
+      tieBreakPareja1: "",
+      tieBreakPareja2: "",
+    },
+  ]);
+  const [ganadorEspecialId, setGanadorEspecialId] = useState("");
+  const [resultadoOficial, setResultadoOficial] = useState(true);
+  const [guardandoResultado, setGuardandoResultado] = useState(false);
+  const [mensajeResultado, setMensajeResultado] = useState<string | null>(null);
+  const [errorResultado, setErrorResultado] = useState<string | null>(null);
 
   useEffect(() => {
     async function cargarCompetencia() {
@@ -294,6 +325,144 @@ export default function CompetenciaAdminPage() {
 
   if (!competencia) {
     return <p className="text-slate-400">Competencia no encontrada.</p>;
+  }
+
+  async function guardarResultado() {
+    if (!competencia) return;
+
+    const partido = partidos.find((item) => item.id === partidoSeleccionadoId);
+
+    if (!partido) {
+      setErrorResultado("Seleccioná un partido válido.");
+      return;
+    }
+
+    setGuardandoResultado(true);
+    setErrorResultado(null);
+    setMensajeResultado(null);
+
+    try {
+      let sets: SetResultado[] = [];
+      let ganadorParejaId: string | undefined;
+
+      if (tipoResultado === "normal") {
+        sets = marcadores.slice(0, cantidadSets).map((marcador, indice) => {
+          const tieBreakActivo =
+            marcador.juegosPareja1 === "6" && marcador.juegosPareja2 === "6";
+
+          const tieBreakCompleto =
+            marcador.tieBreakPareja1 !== "" && marcador.tieBreakPareja2 !== "";
+
+          if (tieBreakActivo && !tieBreakCompleto) {
+            throw new Error(
+              `Completá los puntos del tie-break del set ${indice + 1}.`,
+            );
+          }
+
+          const puntosTieBreakPareja1 = Number(marcador.tieBreakPareja1);
+          const puntosTieBreakPareja2 = Number(marcador.tieBreakPareja2);
+
+          const tieBreakValido =
+            tieBreakCompleto &&
+            puntosTieBreakPareja1 !== puntosTieBreakPareja2 &&
+            Math.max(puntosTieBreakPareja1, puntosTieBreakPareja2) >= 7 &&
+            Math.abs(puntosTieBreakPareja1 - puntosTieBreakPareja2) >= 2;
+
+          if (tieBreakActivo && !tieBreakValido) {
+            throw new Error(
+              `El tie-break del set ${indice + 1} debe ganarse por al menos dos puntos.`,
+            );
+          }
+
+          const juegosPareja1 = tieBreakActivo
+            ? puntosTieBreakPareja1 > puntosTieBreakPareja2
+              ? 7
+              : 6
+            : Number(marcador.juegosPareja1);
+
+          const juegosPareja2 = tieBreakActivo
+            ? puntosTieBreakPareja2 > puntosTieBreakPareja1
+              ? 7
+              : 6
+            : Number(marcador.juegosPareja2);
+
+          const set: SetResultado = {
+            setNumero: indice + 1,
+            juegosPareja1,
+            juegosPareja2,
+          };
+
+          if (tieBreakActivo) {
+            set.tieBreakPareja1 = puntosTieBreakPareja1;
+            set.tieBreakPareja2 = puntosTieBreakPareja2;
+          }
+
+          return set;
+        });
+
+        const setsGanadosPareja1 = sets.filter(
+          (set) => set.juegosPareja1 > set.juegosPareja2,
+        ).length;
+
+        ganadorParejaId =
+          setsGanadosPareja1 >= 2 ? partido.pareja1Id : partido.pareja2Id;
+      } else if (tipoResultado === "walkover" || tipoResultado === "abandono") {
+        if (!ganadorEspecialId) {
+          throw new Error("Seleccioná la pareja ganadora.");
+        }
+
+        ganadorParejaId = ganadorEspecialId;
+      }
+
+      await registrarResultado(
+        {
+          partidoId: partido.id,
+          tipo: tipoResultado,
+          sets,
+          ganadorParejaId,
+          oficial: resultadoOficial,
+          fechaRegistro: new Date(),
+        },
+        {
+          partidoId: partido.id,
+          torneoId: competencia.torneoId,
+          competenciaId: competencia.id,
+          categoriaId: competencia.categoriaId,
+        },
+      );
+
+      setMensajeResultado("Resultado registrado correctamente.");
+      setPartidoSeleccionadoId("");
+      setGanadorEspecialId("");
+      setCantidadSets(2);
+      setMarcadores([
+        {
+          juegosPareja1: "",
+          juegosPareja2: "",
+          tieBreakPareja1: "",
+          tieBreakPareja2: "",
+        },
+        {
+          juegosPareja1: "",
+          juegosPareja2: "",
+          tieBreakPareja1: "",
+          tieBreakPareja2: "",
+        },
+        {
+          juegosPareja1: "",
+          juegosPareja2: "",
+          tieBreakPareja1: "",
+          tieBreakPareja2: "",
+        },
+      ]);
+      setActualizacionPartidos((actual) => actual + 1);
+    } catch (err) {
+      setErrorResultado(
+        err instanceof Error ? err.message : "No se pudo guardar el resultado.",
+      );
+    } finally {
+      setGuardandoResultado(false);
+    }
   }
 
   return (
@@ -598,13 +767,282 @@ export default function CompetenciaAdminPage() {
         </div>
 
         <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
-          <h4 className="text-lg font-semibold text-slate-100 mb-2">
-            Resultados
+          <h4 className="text-lg font-semibold text-slate-100 mb-4">
+            Registrar resultado
           </h4>
-          <p className="text-sm text-slate-400">
-            La carga y validación de resultados se integrará en el siguiente
-            paso.
-          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">
+                Partido
+              </label>
+              <select
+                value={partidoSeleccionadoId}
+                onChange={(e) => {
+                  setPartidoSeleccionadoId(e.target.value);
+                  setErrorResultado(null);
+                  setMensajeResultado(null);
+                }}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white"
+              >
+                <option value="">Seleccionar partido</option>
+                {partidos
+                  .filter(
+                    (partido) =>
+                      ![
+                        "finalizado",
+                        "walkover",
+                        "abandono",
+                        "suspendido",
+                      ].includes(partido.estado),
+                  )
+                  .map((partido) => (
+                    <option key={partido.id} value={partido.id}>
+                      {nombrePareja(partido.pareja1Id)} vs.{" "}
+                      {nombrePareja(partido.pareja2Id)}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">
+                Tipo de resultado
+              </label>
+              <select
+                value={tipoResultado}
+                onChange={(e) => {
+                  setTipoResultado(e.target.value as TipoResultado);
+                  setErrorResultado(null);
+                }}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white"
+              >
+                <option value="normal">Partido normal</option>
+                <option value="walkover">Walkover</option>
+                <option value="abandono">Abandono</option>
+                <option value="suspension">Suspensión</option>
+              </select>
+            </div>
+
+            {tipoResultado === "normal" && (
+              <>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">
+                    Cantidad de sets
+                  </label>
+                  <select
+                    value={cantidadSets}
+                    onChange={(e) =>
+                      setCantidadSets(Number(e.target.value) as 2 | 3)
+                    }
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white"
+                  >
+                    <option value={2}>Dos sets</option>
+                    <option value={3}>Tres sets</option>
+                  </select>
+                </div>
+
+                {marcadores.slice(0, cantidadSets).map((marcador, indice) => (
+                  <div
+                    key={indice}
+                    className="rounded-lg border border-slate-700 p-3 space-y-3"
+                  >
+                    <p className="text-sm font-semibold text-slate-200">
+                      Set {indice + 1}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="text-xs text-slate-400">
+                        {nombrePareja(
+                          partidos.find((p) => p.id === partidoSeleccionadoId)
+                            ?.pareja1Id ?? "",
+                        )}
+                        <input
+                          type="number"
+                          min="0"
+                          max="7"
+                          value={marcador.juegosPareja1}
+                          onChange={(e) =>
+                            setMarcadores((actual) =>
+                              actual.map((item, i) =>
+                                i === indice
+                                  ? { ...item, juegosPareja1: e.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-white"
+                        />
+                      </label>
+
+                      <label className="text-xs text-slate-400">
+                        {nombrePareja(
+                          partidos.find((p) => p.id === partidoSeleccionadoId)
+                            ?.pareja2Id ?? "",
+                        )}
+                        <input
+                          type="number"
+                          min="0"
+                          max="7"
+                          value={marcador.juegosPareja2}
+                          onChange={(e) =>
+                            setMarcadores((actual) =>
+                              actual.map((item, i) =>
+                                i === indice
+                                  ? { ...item, juegosPareja2: e.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-white"
+                        />
+                      </label>
+                    </div>
+
+                    {Number(marcador.juegosPareja1) === 6 &&
+                      Number(marcador.juegosPareja2) === 6 && (
+                        <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                          <p className="text-sm font-medium text-amber-300">
+                            Tie-break
+                          </p>
+
+                          <p className="text-xs text-slate-400">
+                            Ingresá los puntos del desempate. El set se
+                            completará automáticamente como 7-6 para la pareja
+                            ganadora.
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="text-xs text-slate-400">
+                              Puntos pareja 1
+                              <input
+                                type="number"
+                                min="0"
+                                value={marcador.tieBreakPareja1}
+                                onChange={(e) =>
+                                  setMarcadores((actual) =>
+                                    actual.map((item, i) =>
+                                      i === indice
+                                        ? {
+                                            ...item,
+                                            tieBreakPareja1: e.target.value,
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-white"
+                              />
+                            </label>
+
+                            <label className="text-xs text-slate-400">
+                              Puntos pareja 2
+                              <input
+                                type="number"
+                                min="0"
+                                value={marcador.tieBreakPareja2}
+                                onChange={(e) =>
+                                  setMarcadores((actual) =>
+                                    actual.map((item, i) =>
+                                      i === indice
+                                        ? {
+                                            ...item,
+                                            tieBreakPareja2: e.target.value,
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-white"
+                              />
+                            </label>
+                          </div>
+
+                          {marcador.tieBreakPareja1 !== "" &&
+                            marcador.tieBreakPareja2 !== "" &&
+                            Number(marcador.tieBreakPareja1) !==
+                              Number(marcador.tieBreakPareja2) &&
+                            Math.max(
+                              Number(marcador.tieBreakPareja1),
+                              Number(marcador.tieBreakPareja2),
+                            ) >= 7 &&
+                            Math.abs(
+                              Number(marcador.tieBreakPareja1) -
+                                Number(marcador.tieBreakPareja2),
+                            ) >= 2 && (
+                              <p className="text-sm font-semibold text-emerald-300">
+                                Resultado del set:{" "}
+                                {Number(marcador.tieBreakPareja1) >
+                                Number(marcador.tieBreakPareja2)
+                                  ? "7-6 para la pareja 1"
+                                  : "6-7 para la pareja 2"}
+                              </p>
+                            )}
+                        </div>
+                      )}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {(tipoResultado === "walkover" || tipoResultado === "abandono") && (
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">
+                  Pareja ganadora
+                </label>
+                <select
+                  value={ganadorEspecialId}
+                  onChange={(e) => setGanadorEspecialId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white"
+                >
+                  <option value="">Seleccionar pareja</option>
+                  {(() => {
+                    const partido = partidos.find(
+                      (p) => p.id === partidoSeleccionadoId,
+                    );
+                    if (!partido) return null;
+                    return (
+                      <>
+                        <option value={partido.pareja1Id}>
+                          {nombrePareja(partido.pareja1Id)}
+                        </option>
+                        <option value={partido.pareja2Id}>
+                          {nombrePareja(partido.pareja2Id)}
+                        </option>
+                      </>
+                    );
+                  })()}
+                </select>
+              </div>
+            )}
+
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={resultadoOficial}
+                onChange={(e) => setResultadoOficial(e.target.checked)}
+                className="accent-emerald-500"
+              />
+              Resultado oficial (genera historial)
+            </label>
+
+            {errorResultado && (
+              <p className="text-sm text-red-300">{errorResultado}</p>
+            )}
+
+            {mensajeResultado && (
+              <p className="text-sm text-emerald-300">{mensajeResultado}</p>
+            )}
+
+            <button
+              type="button"
+              onClick={guardarResultado}
+              disabled={guardandoResultado || !partidoSeleccionadoId}
+              className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {guardandoResultado ? "Guardando..." : "Guardar resultado"}
+            </button>
+          </div>
         </div>
       </div>
     </section>

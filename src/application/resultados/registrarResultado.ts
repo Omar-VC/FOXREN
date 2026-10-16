@@ -1,7 +1,4 @@
-import {
-  doc,
-  runTransaction,
-} from "firebase/firestore";
+import { doc, runTransaction } from "firebase/firestore";
 
 import { db } from "../../infrastructure/firebase/firebase";
 import { COLLECTIONS } from "../../infrastructure/firebase/collections";
@@ -26,9 +23,7 @@ export async function registrarResultado(
   resultado: Omit<Resultado, "id">,
   datos: DatosResultado,
 ): Promise<string> {
-  const partido = await partidosRepository.obtenerPorId(
-    datos.partidoId
-  );
+  const partido = await partidosRepository.obtenerPorId(datos.partidoId);
 
   if (!partido) {
     throw new Error("No se encontró el partido.");
@@ -40,48 +35,44 @@ export async function registrarResultado(
     partido.estado === "abandono" ||
     partido.estado === "suspendido"
   ) {
-    throw new Error(
-      "El partido ya se encuentra cerrado."
-    );
+    throw new Error("El partido ya se encuentra cerrado.");
   }
 
-  const resultadosExistentes =
-    await resultadoRepository.obtenerPorPartido(
-      datos.partidoId
-    );
+  const resultadosExistentes = await resultadoRepository.obtenerPorPartido(
+    datos.partidoId,
+  );
 
   if (resultadosExistentes.length > 0) {
-    throw new Error(
-      "El partido ya tiene un resultado registrado."
-    );
+    throw new Error("El partido ya tiene un resultado registrado.");
   }
 
   if (partido.pareja1Id === partido.pareja2Id) {
-    throw new Error(
-      "Las parejas del partido no pueden ser iguales."
-    );
+    throw new Error("Las parejas del partido no pueden ser iguales.");
   }
 
-  const pareja1 =
-    await parejasRepository.obtenerPorId(
-      partido.pareja1Id
-    );
+  const pareja1 = await parejasRepository.obtenerPorId(partido.pareja1Id);
 
-  const pareja2 =
-    await parejasRepository.obtenerPorId(
-      partido.pareja2Id
-    );
+  const pareja2 = await parejasRepository.obtenerPorId(partido.pareja2Id);
 
   if (!pareja1 || !pareja2) {
-    throw new Error(
-      "No se encontraron las parejas del partido."
-    );
+    throw new Error("No se encontraron las parejas del partido.");
   }
 
   if (!validarTipoResultado(resultado)) {
-    throw new Error(
-      "El tipo de resultado no es válido."
-    );
+    throw new Error("El tipo de resultado no es válido.");
+  }
+
+  if (resultado.tipo === "normal") {
+    const setsGanadosPareja1 = resultado.sets.filter(
+      (set) => set.juegosPareja1 > set.juegosPareja2,
+    ).length;
+
+    const ganadorEsperado =
+      setsGanadosPareja1 === 2 ? partido.pareja1Id : partido.pareja2Id;
+
+    if (resultado.ganadorParejaId !== ganadorEsperado) {
+      throw Error("La pareja ganadora no coincide con el marcador.");
+    }
   }
 
   if (
@@ -89,104 +80,83 @@ export async function registrarResultado(
     resultado.ganadorParejaId !== partido.pareja1Id &&
     resultado.ganadorParejaId !== partido.pareja2Id
   ) {
-    throw new Error(
-      "La pareja ganadora no pertenece al partido."
-    );
+    throw new Error("La pareja ganadora no pertenece al partido.");
   }
 
-  const registrosHistorial =
-    resultado.oficial
-      ? crearHistorialDesdeResultado(
-          {
-            ...resultado,
-            id: "",
-            partidoId: datos.partidoId,
-          },
-          {
-            torneoId: datos.torneoId,
-            competenciaId: datos.competenciaId,
-            categoriaId: datos.categoriaId,
-            pareja1: {
-              parejaId: pareja1.id,
-              jugador1Id: pareja1.jugador1Id,
-              jugador2Id: pareja1.jugador2Id,
-            },
-            pareja2: {
-              parejaId: pareja2.id,
-              jugador1Id: pareja2.jugador1Id,
-              jugador2Id: pareja2.jugador2Id,
-            },
-          }
-        )
-      : [];
-
-  return await runTransaction(
-    db,
-    async (transaction) => {
-      const partidoRef = doc(
-        db,
-        COLLECTIONS.partidos,
-        datos.partidoId
-      );
-
-      const partidoActual =
-        await transaction.get(partidoRef);
-
-      if (!partidoActual.exists()) {
-        throw new Error(
-          "No se encontró el partido."
-        );
-      }
-
-      const datosPartidoActual =
-        partidoActual.data();
-
-      if (
-        datosPartidoActual.estado === "finalizado" ||
-        datosPartidoActual.estado === "walkover" ||
-        datosPartidoActual.estado === "abandono" ||
-        datosPartidoActual.estado === "suspendido"
-      ) {
-        throw new Error(
-          "El partido ya se encuentra cerrado."
-        );
-      }
-
-      const resultadoId =
-        await resultadoRepository.crearResultado(
-          {
-            ...resultado,
-            partidoId: datos.partidoId,
-          },
-          transaction
-        );
-
-      await partidosRepository.updateResultado(
-        datos.partidoId,
+  const registrosHistorial = resultado.oficial
+    ? crearHistorialDesdeResultado(
         {
-          estado:
-            resultado.tipo === "normal"
-              ? "finalizado"
-              : resultado.tipo === "walkover"
-                ? "walkover"
-                : resultado.tipo === "abandono"
-                  ? "abandono"
-                  : "suspendido",
-          sets: resultado.sets,
-          ganadorParejaId:
-            resultado.ganadorParejaId,
+          ...resultado,
+          id: "",
+          partidoId: datos.partidoId,
         },
-        transaction
-      );
+        {
+          torneoId: datos.torneoId,
+          competenciaId: datos.competenciaId,
+          categoriaId: datos.categoriaId,
+          pareja1: {
+            parejaId: pareja1.id,
+            jugador1Id: pareja1.jugador1Id,
+            jugador2Id: pareja1.jugador2Id,
+          },
+          pareja2: {
+            parejaId: pareja2.id,
+            jugador1Id: pareja2.jugador1Id,
+            jugador2Id: pareja2.jugador2Id,
+          },
+        },
+      )
+    : [];
 
-      for (const registro of registrosHistorial) {
-        await historialRepository.crearRegistro(
-          registro,
-          transaction
-        );
-      }
+  return await runTransaction(db, async (transaction) => {
+    const partidoRef = doc(db, COLLECTIONS.partidos, datos.partidoId);
 
-      return resultadoId;
+    const partidoActual = await transaction.get(partidoRef);
+
+    if (!partidoActual.exists()) {
+      throw new Error("No se encontró el partido.");
     }
-  );
+
+    const datosPartidoActual = partidoActual.data();
+
+    if (
+      datosPartidoActual.estado === "finalizado" ||
+      datosPartidoActual.estado === "walkover" ||
+      datosPartidoActual.estado === "abandono" ||
+      datosPartidoActual.estado === "suspendido"
+    ) {
+      throw new Error("El partido ya se encuentra cerrado.");
+    }
+
+    const resultadoId = await resultadoRepository.crearResultado(
+      {
+        ...resultado,
+        partidoId: datos.partidoId,
+      },
+      transaction,
+    );
+
+    await partidosRepository.updateResultado(
+      datos.partidoId,
+      {
+        estado:
+          resultado.tipo === "normal"
+            ? "finalizado"
+            : resultado.tipo === "walkover"
+              ? "walkover"
+              : resultado.tipo === "abandono"
+                ? "abandono"
+                : "suspendido",
+        sets: resultado.sets,
+        ganadorParejaId: resultado.ganadorParejaId,
+      },
+      transaction,
+    );
+
+    for (const registro of registrosHistorial) {
+      await historialRepository.crearRegistro(registro, transaction);
+    }
+
+    return resultadoId;
+  });
 }
