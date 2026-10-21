@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
 
@@ -10,7 +10,7 @@ export function useJugadores() {
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarJugadores() {
+  const cargarJugadores = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
@@ -24,7 +24,7 @@ export function useJugadores() {
     } finally {
       setCargando(false);
     }
-  }
+  }, []);
 
   async function crearJugador(
     datos: Omit<Jugador, "id">
@@ -45,8 +45,8 @@ export function useJugadores() {
   }
 
   useEffect(() => {
-    cargarJugadores();
-  }, []);
+    void Promise.resolve().then(cargarJugadores);
+  }, [cargarJugadores]);
 
   return {
     jugadores,

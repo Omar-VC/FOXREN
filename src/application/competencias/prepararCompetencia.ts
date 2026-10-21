@@ -49,15 +49,12 @@ export async function prepararCompetencia(
     };
   }
 
-  const jugadores = await jugadoresRepository.obtenerJugadores();
-
-  const jugadoresPorId = new Map(
-  jugadores.map((jugador) => [jugador.id, jugador]),
-);
-
-const parejasActivas = parejas.filter(
-  (pareja) => pareja.estado === "activa",
-);
+  const parejasActivas = parejas.filter((pareja) => pareja.estado === "activa");
+  const idsJugadores = [...new Set(
+    parejasActivas.flatMap((pareja) => [pareja.jugador1Id, pareja.jugador2Id]),
+  )];
+  const jugadores = await jugadoresRepository.obtenerPorIds(idsJugadores);
+  const jugadoresPorId = new Map(jugadores.map((jugador) => [jugador.id, jugador]));
 
 const parejasInforme = parejasActivas.map((pareja) => {
   const jugador1 = jugadoresPorId.get(pareja.jugador1Id);
@@ -75,13 +72,6 @@ const parejasInforme = parejasActivas.map((pareja) => {
 
   
 
-  const idsJugadores = new Set<string>();
-
-  for (const pareja of parejasActivas) {
-    idsJugadores.add(pareja.jugador1Id);
-    idsJugadores.add(pareja.jugador2Id);
-  }
-
   const erroresParejas = validarParejasDeCompetencia(
     competencia,
     parejas,
@@ -95,7 +85,7 @@ const parejasInforme = parejasActivas.map((pareja) => {
   resumen: {
     cantidadParejas: parejasActivas.length,
     cupoMaximo: competencia.cupoMaximoParejas,
-    jugadores: idsJugadores.size,
+    jugadores: idsJugadores.length,
   },
   parejas: parejasInforme,
 };
@@ -107,7 +97,7 @@ const parejasInforme = parejasActivas.map((pareja) => {
   resumen: {
     cantidadParejas: parejasActivas.length,
     cupoMaximo: competencia.cupoMaximoParejas,
-    jugadores: idsJugadores.size,
+  jugadores: idsJugadores.length,
   },
   parejas: parejasInforme,
 };

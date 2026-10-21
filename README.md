@@ -59,15 +59,18 @@ El proyecto cuenta con una base funcional para la administración de competencia
 - Validaciones de marcadores y sets.
 - Actualización del estado del partido al registrar un resultado.
 - Preparación del registro de historial deportivo a partir de resultados oficiales.
+- Tabla administrativa por zona, con victorias, diferencia de sets y diferencia de games.
+- Clasificación de la zona solo cuando todos los partidos tienen resultado oficial; los empates que cruzan el corte quedan bloqueados.
+- Resolución transaccional de una suspensión con resultado posterior; la versión de suspensión se conserva en el registro del resultado.
 
 Las funcionalidades deben seguir verificándose mediante pruebas funcionales y de integración antes de considerarse completamente validadas.
 
 ## Próximas etapas
 
-- Verificar la persistencia de resultados oficiales y del historial de jugadores.
-- Implementar tablas de posiciones por zona.
-- Automatizar la clasificación de parejas.
-- Generar cuadros de eliminación directa.
+- Implementar un partido de desempate cuando haya igualdad total en el corte de clasificación.
+- Definir y generar automáticamente los cuadros de playoff conforme a un reglamento FIP aplicable al pádel amateur.
+- Implementar la continuación de un partido suspendido conservando sets y games parciales.
+- Implementar corrección y anulación auditables de resultados oficiales y reconstrucción del historial derivado.
 - Desarrollar perfiles e historiales públicos de jugadores.
 - Implementar un sistema de ranking configurable.
 - Ampliar la gestión hacia múltiples complejos, organizadores y circuitos.
@@ -88,6 +91,26 @@ Para ello, el desarrollo contempla:
 
 Estos criterios deberán validarse a medida que crezcan el volumen de torneos, partidos y jugadores.
 
+## Entorno local de Firebase
+
+La aplicación usa Firebase Emulator Suite por defecto. En este modo el proyecto
+del cliente se fija en `demo-foxren` y Authentication/Firestore apuntan a
+`127.0.0.1`; no usa el proyecto definido en `.firebaserc` ni el ID de proyecto
+del archivo `.env`.
+
+En una terminal, iniciá únicamente los emuladores locales:
+
+```sh
+firebase emulators:start --project demo-foxren --only auth,firestore
+```
+
+En otra terminal ejecutá `npm run dev`. Si los emuladores no están disponibles,
+las operaciones fallan localmente; la aplicación no cambia al proyecto remoto.
+
+El modo remoto solo se activa con `VITE_FIREBASE_MODE=production` y requiere
+`VITE_FIREBASE_PROJECT_ID`. No uses esa opción para pruebas locales. No se
+incluye configuración de despliegue ni se han aplicado reglas a Firebase remoto.
+
 ## Filosofía del proyecto
 
 - **Una identidad por jugador:** evitar duplicados y mantener la continuidad del historial deportivo.
@@ -101,7 +124,7 @@ Estos criterios deberán validarse a medida que crezcan el volumen de torneos, p
 
 FOXREN se encuentra en etapa de desarrollo funcional y consolidación de su arquitectura.
 
-La prioridad actual es asegurar la integridad del registro de resultados, verificar la generación del historial deportivo y avanzar hacia las tablas de posiciones y la clasificación automática.
+La tabla de posiciones por zona y la clasificación con criterios de victorias, diferencia de sets y diferencia de games están implementadas en el área administrativa. Un empate completo en el corte se detiene: la regla de partido de desempate requiere su flujo propio. El formato de playoff sigue pendiente de una regla aplicable al pádel amateur; las regulaciones FIP consultadas corresponden a circuitos específicos.
 
 El sistema de puntuación y las reglas definitivas del ranking deberán establecerse y documentarse antes de su implementación como criterios oficiales.
 

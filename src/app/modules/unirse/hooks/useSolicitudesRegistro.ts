@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { solicitudesRegistroRepository } from "../../../../infrastructure/repositories/solicitudesRegistroRepository";
 import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
@@ -11,7 +11,7 @@ export function useSolicitudesRegistro() {
   const [procesando, setProcesando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarSolicitudes() {
+  const cargarSolicitudes = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
@@ -24,19 +24,14 @@ export function useSolicitudesRegistro() {
     } finally {
       setCargando(false);
     }
-  }
+  }, []);
 
   async function aprobarSolicitud(solicitud: SolicitudRegistro) {
     try {
       setProcesando(solicitud.id);
       setError(null);
 
-      await jugadoresRepository.crearDesdeSolicitud(solicitud);
-
-      await solicitudesRegistroRepository.cambiarEstado(
-        solicitud.id,
-        "aprobada",
-      );
+      await jugadoresRepository.aprobarDesdeSolicitud(solicitud.id);
 
       await cargarSolicitudes();
     } catch (error) {
@@ -67,8 +62,8 @@ export function useSolicitudesRegistro() {
   }
 
   useEffect(() => {
-    cargarSolicitudes();
-  }, []);
+    void Promise.resolve().then(cargarSolicitudes);
+  }, [cargarSolicitudes]);
 
   return {
     solicitudes,

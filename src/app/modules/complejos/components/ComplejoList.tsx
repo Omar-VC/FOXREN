@@ -10,10 +10,11 @@ export default function ComplejoList({ complejos }: Props) {
   }
 
   return (
-    <ul>
+    <ul className="fox-card-grid">
       {complejos.map((complejo) => (
-        <li key={complejo.id}>
-          {complejo.nombre} — {complejo.ciudad} — {complejo.provincia}
+        <li className="fox-card" key={complejo.id}>
+          <strong>{complejo.nombre}</strong>
+          <p className="fox-card-meta">{complejo.ciudad} · {complejo.provincia}</p>
         </li>
       ))}
     </ul>

@@ -28,14 +28,11 @@ export default function AdminTorneosPage() {
       {torneos.length === 0 ? (
         <p>No hay torneos registrados.</p>
       ) : (
-        <ul>
+        <ul className="fox-card-grid">
           {torneos.map((torneo) => (
-            <li key={torneo.id}>
+            <li className="fox-card" key={torneo.id}>
               <strong>{torneo.nombre}</strong>
-
-              {" — "}
-
-              {torneo.estado}
+              <p className="fox-card-meta">{torneo.estado}</p>
 
               <CompetenciasAdmin torneoId={torneo.id} />
             </li>

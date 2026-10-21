@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { categoriasRepository } from "../../../../infrastructure/repositories/categoriasRepository";
 
@@ -10,7 +10,7 @@ export function useCategorias() {
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarCategorias() {
+  const cargarCategorias = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
@@ -24,7 +24,7 @@ export function useCategorias() {
     } finally {
       setCargando(false);
     }
-  }
+  }, []);
 
   async function crearCategoria(
     datos: Omit<Categoria, "id">
@@ -45,8 +45,8 @@ export function useCategorias() {
   }
 
   useEffect(() => {
-    cargarCategorias();
-  }, []);
+    void Promise.resolve().then(cargarCategorias);
+  }, [cargarCategorias]);
 
   return {
     categorias,

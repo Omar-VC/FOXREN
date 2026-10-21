@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { torneosRepository } from "../../../../infrastructure/repositories/torneosRepository";
 
@@ -10,7 +10,7 @@ export function useTorneos() {
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarTorneos() {
+  const cargarTorneos = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
@@ -24,7 +24,7 @@ export function useTorneos() {
     } finally {
       setCargando(false);
     }
-  }
+  }, []);
 
   async function crearTorneo(
     datos: Omit<Torneo, "id" | "fechaCreacion">
@@ -45,8 +45,8 @@ export function useTorneos() {
   }
 
   useEffect(() => {
-    cargarTorneos();
-  }, []);
+    void Promise.resolve().then(cargarTorneos);
+  }, [cargarTorneos]);
 
   return {
     torneos,

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useCircuitos } from "../../circuitos/hooks/useCircuitos";
 import { useComplejos } from "../../complejos/hooks/useComplejos";
+import OrganizadorSelector from "../../../shared/OrganizadorSelector";
 
 interface Props {
   creando: boolean;
@@ -14,7 +15,7 @@ interface Props {
     fechaFin?: Date;
     modalidad: "presencial";
     estado: "pendiente";
-    contactoOrganizador: string;
+    organizadorIds: string[];
   }) => Promise<void>;
 }
 
@@ -37,8 +38,7 @@ export default function TorneoForm({
   const [complejoId, setComplejoId] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
-  const [contactoOrganizador, setContactoOrganizador] =
-    useState("");
+  const [organizadorIds, setOrganizadorIds] = useState<string[]>([]);
 
   const complejosDisponibles = complejos.filter(
     (complejo) =>
@@ -61,12 +61,12 @@ export default function TorneoForm({
         : undefined,
       modalidad: "presencial",
       estado: "pendiente",
-      contactoOrganizador,
+      organizadorIds,
     });
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="fox-form" onSubmit={handleSubmit}>
       <div>
         <label>Nombre del torneo</label>
 
@@ -173,19 +173,7 @@ export default function TorneoForm({
         />
       </div>
 
-      <div>
-        <label>Contacto del organizador</label>
-
-        <input
-          value={contactoOrganizador}
-          onChange={(event) =>
-            setContactoOrganizador(
-              event.target.value
-            )
-          }
-          required
-        />
-      </div>
+      <OrganizadorSelector value={organizadorIds} onChange={setOrganizadorIds} label="Organizadores específicos del torneo (se suman a los del circuito)" />
 
       <button
         type="submit"

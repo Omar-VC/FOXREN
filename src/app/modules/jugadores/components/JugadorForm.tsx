@@ -66,7 +66,7 @@ export default function JugadorForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="fox-form" onSubmit={handleSubmit}>
       <div>
         <label>Nombre</label>
         <input
@@ -164,7 +164,7 @@ export default function JugadorForm({
         {guardando ? "Guardando..." : "Guardar cambios"}
       </button>
 
-      <button type="button" onClick={onCancelar} disabled={guardando}>
+      <button className="fox-button-secondary" type="button" onClick={onCancelar} disabled={guardando}>
         Cancelar
       </button>
     </form>

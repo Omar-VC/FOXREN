@@ -2,8 +2,6 @@ import { useState } from "react";
 
 import { solicitudesRegistroRepository } from "../../../../infrastructure/repositories/solicitudesRegistroRepository";
 
-import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
-
 export default function SolicitudRegistroForm() {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
@@ -15,6 +13,8 @@ export default function SolicitudRegistroForm() {
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [ladoJuego, setLadoJuego] = useState<"drive" | "reves">("drive");
   const [categoriaDeclarada, setCategoriaDeclarada] = useState("");
+  const [autorizaPublicacionPerfil, setAutorizaPublicacionPerfil] = useState(false);
+  const [autorizaPublicacionApodo, setAutorizaPublicacionApodo] = useState(false);
 
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState("");
@@ -28,25 +28,7 @@ export default function SolicitudRegistroForm() {
       setMensaje("");
       setError("");
 
-      const jugadorExistente =
-        await jugadoresRepository.obtenerJugadorPorDni(dni);
-
-      if (jugadorExistente) {
-        setError("Este DNI ya pertenece a un jugador registrado en FOXREN.");
-        return;
-      }
-
-      const solicitudesExistentes =
-        await solicitudesRegistroRepository.obtenerPorDni(dni);
-
-      const solicitudPendiente = solicitudesExistentes.find(
-        (solicitud) => solicitud.estado === "pendiente",
-      );
-
-      if (solicitudPendiente) {
-        setError("Ya existe una solicitud pendiente para este DNI.");
-        return;
-      }
+      const fechaDecisionPublicacion = new Date();
 
       await solicitudesRegistroRepository.crearSolicitud({
         nombre,
@@ -61,6 +43,10 @@ export default function SolicitudRegistroForm() {
         categoriaDeclarada,
         estado: "pendiente",
         fechaSolicitud: new Date(),
+        autorizaPublicacionPerfil,
+        autorizaPublicacionApodo: autorizaPublicacionPerfil && autorizaPublicacionApodo,
+        fechaDecisionPublicacion,
+        origenDecisionPublicacion: "formulario_publico",
       });
 
       setMensaje("Solicitud enviada correctamente. FOXREN revisará tus datos.");
@@ -78,7 +64,7 @@ export default function SolicitudRegistroForm() {
 
       {error && <p>{error}</p>}
 
-      <form onSubmit={handleSubmit}>
+      <form className="fox-form" onSubmit={handleSubmit}>
         <div>
           <label>Nombre</label>
           <input
@@ -183,6 +169,42 @@ export default function SolicitudRegistroForm() {
             required
           />
         </div>
+
+        <fieldset>
+          <legend>Publicación opcional del perfil deportivo</legend>
+          <p>
+            Si autorizás, FOXREN podría publicar tu nombre y apellido, categoría y,
+            cuando estén disponibles, estadísticas deportivas aprobadas. Esto no
+            publicará tu DNI, fecha de nacimiento ni ubicación. La autorización
+            quedará pendiente de verificación y no publica el perfil automáticamente.
+          </p>
+          <label>
+            <input
+              type="checkbox"
+              checked={autorizaPublicacionPerfil}
+              onChange={(event) => {
+                setAutorizaPublicacionPerfil(event.target.checked);
+                if (!event.target.checked) setAutorizaPublicacionApodo(false);
+              }}
+            />
+            Autorizo la publicación de mi perfil deportivo.
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={autorizaPublicacionApodo}
+              disabled={!autorizaPublicacionPerfil}
+              onChange={(event) => setAutorizaPublicacionApodo(event.target.checked)}
+            />
+            También autorizo que se publique mi apodo.
+          </label>
+          <p>
+            Si más adelante se publica tu perfil, podés pedir el retiro al
+            propietario de FOXREN por un canal de contacto oficial. La identidad
+            se verificará manualmente; al procesar el retiro se quitará la
+            proyección pública y se conservará el historial oficial privado.
+          </p>
+        </fieldset>
 
         <button type="submit" disabled={enviando}>
           {enviando ? "Enviando..." : "Solicitar registro"}

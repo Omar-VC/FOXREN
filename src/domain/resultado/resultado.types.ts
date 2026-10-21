@@ -6,6 +6,14 @@ export type TipoResultado =
   | "abandono"
   | "suspension";
 
+export interface VersionResultado {
+  tipo: TipoResultado;
+  sets: SetResultado[];
+  ganadorParejaId?: string;
+  oficial: boolean;
+  fechaRegistro: Date;
+}
+
 export interface Resultado {
   id: string;
   partidoId: string;
@@ -14,4 +22,5 @@ export interface Resultado {
   ganadorParejaId?: string;
   oficial: boolean;
   fechaRegistro: Date;
+  versiones?: VersionResultado[];
 }

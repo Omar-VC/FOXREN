@@ -12,18 +12,14 @@ export default function CategoriaList({
   }
 
   return (
-    <ul>
+    <ul className="fox-card-grid">
       {categorias.map((categoria) => (
-        <li key={categoria.id}>
+        <li className="fox-card" key={categoria.id}>
           <strong>{categoria.nombre}</strong>
-          {" — "}
-          {categoria.estado}
+          <p className="fox-card-meta">Estado: {categoria.estado}</p>
 
           {categoria.descripcion && (
-            <>
-              {" — "}
-              {categoria.descripcion}
-            </>
+            <p>{categoria.descripcion}</p>
           )}
         </li>
       ))}

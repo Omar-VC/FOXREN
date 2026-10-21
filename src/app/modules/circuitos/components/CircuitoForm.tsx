@@ -1,4 +1,5 @@
 import { useState } from "react";
+import OrganizadorSelector from "../../../shared/OrganizadorSelector";
 
 interface Props {
   creando: boolean;
@@ -7,6 +8,7 @@ interface Props {
     descripcion?: string;
     temporada: string;
     estado: "activo";
+    organizadorIds: string[];
   }) => Promise<void>;
 }
 
@@ -17,6 +19,7 @@ export default function CircuitoForm({
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [temporada, setTemporada] = useState("");
+  const [organizadorIds, setOrganizadorIds] = useState<string[]>([]);
 
   async function handleSubmit(
     event: React.FormEvent
@@ -32,15 +35,17 @@ export default function CircuitoForm({
       descripcion: descripcion.trim() || undefined,
       temporada: temporada.trim(),
       estado: "activo",
+      organizadorIds,
     });
 
     setNombre("");
     setDescripcion("");
     setTemporada("");
+    setOrganizadorIds([]);
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="fox-form" onSubmit={handleSubmit}>
       <div>
         <label>Nombre</label>
 
@@ -76,6 +81,8 @@ export default function CircuitoForm({
           placeholder="Ej: 2026"
         />
       </div>
+
+      <OrganizadorSelector value={organizadorIds} onChange={setOrganizadorIds} label="Organizadores del circuito" />
 
       <button type="submit" disabled={creando}>
         {creando ? "Creando..." : "Crear circuito"}

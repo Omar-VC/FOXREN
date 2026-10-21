@@ -10,4 +10,5 @@ export interface Circuito {
   logoUrl?: string;
   estado: EstadoCircuito;
   fechaCreacion: Date;
+  organizadorIds?: string[];
 }

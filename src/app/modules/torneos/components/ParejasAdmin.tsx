@@ -57,16 +57,12 @@ export default function ParejasAdmin({
           ),
         );
 
-        const jugadores = await Promise.all(
-          idsJugadores.map((id) => jugadoresRepository.obtenerJugadorPorId(id)),
-        );
+        const jugadores = await jugadoresRepository.obtenerPorIds(idsJugadores);
 
         const jugadoresEncontrados: Record<string, Jugador> = {};
 
         jugadores.forEach((jugador) => {
-          if (jugador) {
-            jugadoresEncontrados[jugador.id] = jugador;
-          }
+          jugadoresEncontrados[jugador.id] = jugador;
         });
 
         setJugadoresPorId(jugadoresEncontrados);

@@ -1,10 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import Logo from "../assets/logo.svg";
 
 export const Layout: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
 
   // Enlaces públicos de navegación (se elimina "Jugadores")
   const navLinks = [
@@ -18,8 +27,9 @@ export const Layout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-fox-bg text-slate-100 font-sans selection:bg-fox-neon selection:text-fox-bg">
       {/* Header / Navbar */}
-      <header className="sticky top-0 z-40 bg-fox-surface/90 backdrop-blur-md border-b border-fox-border/60 shadow-lg px-4 md:px-8 py-3.5 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
+      <header className="public-header">
+        <div className="public-header-inner">
+        <Link to="/" className="public-brand">
           <img 
             src={Logo} 
             alt="Logo FOXREN" 
@@ -32,9 +42,11 @@ export const Layout: React.FC = () => {
 
         {/* Botón hamburguesa (mobile) */}
         <button
-          className="md:hidden p-2 text-fox-muted hover:text-white focus:outline-none transition-colors"
+          className="public-menu-toggle"
           onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Abrir menú de navegación"
+          aria-label={menuOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación"}
+          aria-expanded={menuOpen}
+          aria-controls="public-mobile-menu"
         >
           {menuOpen ? (
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,55 +60,52 @@ export const Layout: React.FC = () => {
         </button>
 
         {/* Menú Desktop */}
-        <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+        <nav className="public-nav">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.to;
             return (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-3.5 py-1.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  isActive
-                    ? "bg-fox-neon text-fox-bg shadow-fox-glow font-bold"
-                    : "text-fox-muted hover:text-white hover:bg-fox-card/60"
-                }`}
+                className={`public-nav-link ${isActive ? "is-active" : ""}`}
               >
                 {link.label}
               </Link>
             );
           })}
         </nav>
+        </div>
       </header>
 
       {/* Backdrop para mobile */}
       <div
-        className={`fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 z-40 ${
-          menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
+        className={`public-menu-backdrop ${menuOpen ? "is-open" : ""}`}
+        aria-hidden="true"
         onClick={() => setMenuOpen(false)}
       />
 
       {/* Drawer Menú Mobile */}
       <aside
-        className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-xs bg-fox-surface border-r border-fox-border shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col justify-between ${
-          menuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        id="public-mobile-menu"
+        className={`public-mobile-menu ${menuOpen ? "is-open" : ""}`}
+        aria-hidden={!menuOpen}
       >
-        <div className="p-6">
-          <div className="flex items-center justify-between pb-6 border-b border-fox-border/50 mb-6">
-            <div className="flex items-center gap-2">
-              <img src={Logo} alt="Logo" className="h-7 w-auto" />
-              <span className="text-lg font-extrabold text-white">FOXREN</span>
+        <div className="public-mobile-menu-content">
+          <div className="public-mobile-menu-header">
+            <div className="public-mobile-brand">
+              <img src={Logo} alt="" />
+              <span>FOXREN</span>
             </div>
             <button
               onClick={() => setMenuOpen(false)}
-              className="text-fox-muted hover:text-white p-1"
+              className="public-mobile-close"
+              aria-label="Cerrar menú"
             >
               ✕
             </button>
           </div>
 
-          <nav className="flex flex-col gap-2">
+          <nav className="public-mobile-nav">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.to;
               return (
@@ -104,11 +113,7 @@ export const Layout: React.FC = () => {
                   key={link.to}
                   to={link.to}
                   onClick={() => setMenuOpen(false)}
-                  className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    isActive
-                      ? "bg-fox-neon text-fox-bg font-bold shadow-fox-glow"
-                      : "text-fox-muted hover:text-white hover:bg-fox-card"
-                  }`}
+                  className={`public-mobile-nav-link ${isActive ? "is-active" : ""}`}
                 >
                   {link.label}
                 </Link>
@@ -117,13 +122,13 @@ export const Layout: React.FC = () => {
           </nav>
         </div>
 
-        <div className="p-6 border-t border-fox-border/50 text-xs text-fox-muted text-center">
+        <div className="public-mobile-menu-footer">
           Plataforma de Torneos Deportivos
         </div>
       </aside>
 
       {/* Contenido Dinámico de las Rutas */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8">
+      <main className="public-main flex-1 max-w-7xl w-full mx-auto p-4 md:p-8">
         <Outlet />
       </main>
 

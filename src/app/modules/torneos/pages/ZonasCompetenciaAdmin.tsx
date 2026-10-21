@@ -1,19 +1,22 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { generarZonasCompetencia } from "../../../../application/competencias/generarZonasCompetencia";
 import { zonasRepository } from "../../../../infrastructure/repositories/zonasRepository";
 import { parejasRepository } from "../../../../infrastructure/repositories/parejasRepository";
 import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
 import type { Zona } from "../../../../domain/competencia/competencia.zonas.types";
+import type { Competencia } from "../../../../domain/competencia/competencia.types";
 
 interface Props {
   competenciaId: string;
+  formato: Competencia["formato"];
   inscripcionesCerradas: boolean;
   actualizacion: number;
 }
 
 export default function ZonasCompetenciaAdmin({
   competenciaId,
+  formato,
   inscripcionesCerradas,
   actualizacion,
 }: Props) {
@@ -27,22 +30,19 @@ export default function ZonasCompetenciaAdmin({
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarDatos() {
-    setCargando(true);
-    setError(null);
-
+  const cargarDatos = useCallback(async (estaActivo: () => boolean = () => true) => {
+    if (estaActivo()) {
+      setCargando(true);
+      setError(null);
+    }
     try {
       const [zonasGuardadas, parejas] = await Promise.all([
         zonasRepository.obtenerPorCompetenciaId(competenciaId),
         parejasRepository.obtenerPorCompetenciaId(competenciaId),
       ]);
-
       const parejasActivas = parejas.filter(
         (pareja) => pareja.estado === "activa",
       );
-
-      setZonas(zonasGuardadas);
-      setCantidadParejasActivas(parejasActivas.length);
 
       const parejasEnZonas = new Set(
         zonasGuardadas.flatMap((zona) => zona.parejaIds),
@@ -61,19 +61,16 @@ export default function ZonasCompetenciaAdmin({
         ),
       ];
 
-      const jugadores = await Promise.all(
-        idsJugadores.map((id) => jugadoresRepository.obtenerJugadorPorId(id)),
-      );
+      const jugadores = await jugadoresRepository.obtenerPorIds(idsJugadores);
+      if (!estaActivo()) return;
 
       const nombresJugadores = new Map<string, string>();
 
       jugadores.forEach((jugador) => {
-        if (jugador) {
-          nombresJugadores.set(
-            jugador.id,
-            `${jugador.nombre} ${jugador.apellido}`,
-          );
-        }
+        nombresJugadores.set(
+          jugador.id,
+          `${jugador.nombre} ${jugador.apellido}`,
+        );
       });
 
       const nombres = Object.fromEntries(
@@ -85,27 +82,35 @@ export default function ZonasCompetenciaAdmin({
         ]),
       );
 
-      setNombresParejas(nombres);
-
       const maximoZonas = Math.floor(parejasActivas.length / 2);
 
+      setError(null);
+      setZonas(zonasGuardadas);
+      setCantidadParejasActivas(parejasActivas.length);
+      setNombresParejas(nombres);
       setCantidadZonas((actual) =>
         maximoZonas > 0 ? Math.min(Math.max(actual, 1), maximoZonas) : 1,
       );
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudieron cargar las zonas.",
-      );
+      if (estaActivo()) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar las zonas.",
+        );
+      }
     } finally {
-      setCargando(false);
+      if (estaActivo()) setCargando(false);
     }
-  }
+  }, [competenciaId]);
 
   useEffect(() => {
-    void cargarDatos();
-  }, [competenciaId, actualizacion]);
+    let montado = true;
+    void Promise.resolve().then(() => cargarDatos(() => montado));
+    return () => {
+      montado = false;
+    };
+  }, [cargarDatos, actualizacion]);
 
   async function generarZonas() {
     setGenerando(true);
@@ -138,13 +143,20 @@ export default function ZonasCompetenciaAdmin({
     <div>
       <h3>Zonas</h3>
 
+      {formato === "eliminacion_directa" && (
+        <p>
+          Esta competencia usa eliminación directa. La generación automática de
+          llaves todavía no está disponible.
+        </p>
+      )}
+
       {error && <p role="alert">{error}</p>}
 
-      {!inscripcionesCerradas && zonas.length === 0 && (
+      {formato === "zonas_eliminacion_directa" && !inscripcionesCerradas && zonas.length === 0 && (
         <p>Para generar las zonas, primero debés cerrar las inscripciones.</p>
       )}
 
-      {inscripcionesCerradas &&
+      {formato === "zonas_eliminacion_directa" && inscripcionesCerradas &&
         zonas.length === 0 &&
         cantidadParejasActivas >= 2 && (
           <>
@@ -178,7 +190,7 @@ export default function ZonasCompetenciaAdmin({
           </>
         )}
 
-      {inscripcionesCerradas &&
+      {formato === "zonas_eliminacion_directa" && inscripcionesCerradas &&
         zonas.length === 0 &&
         cantidadParejasActivas < 2 && (
           <p>Se necesitan al menos dos parejas activas para generar zonas.</p>

@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   getDocs,
   query,
@@ -29,27 +28,12 @@ export const historialRepository = {
     })) as RegistroHistorial[];
   },
 
-  async crearRegistro(
+  crearRegistro(
     datos: RegistroHistorial,
-    transaction?: Transaction
-  ): Promise<string> {
-    if (transaction) {
-      const historialRef = collection(
-        db,
-        COLLECTIONS.historial
-      );
-
-      const docRef = doc(historialRef);
-
-      transaction.set(docRef, datos);
-
-      return docRef.id;
-    }
-
-    const docRef = await addDoc(
-      collection(db, COLLECTIONS.historial),
-      datos
-    );
+    transaction: Transaction,
+  ): string {
+    const docRef = doc(collection(db, COLLECTIONS.historial));
+    transaction.set(docRef, datos);
 
     return docRef.id;
   },

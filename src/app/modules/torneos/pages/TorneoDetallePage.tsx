@@ -71,8 +71,6 @@ export default function TorneoDetallePage() {
         <p>Fecha de fin: {torneo.fechaFin.toLocaleDateString()}</p>
       )}
 
-      <p>Contacto: {torneo.contactoOrganizador}</p>
-
       <hr />
 
       <CompetenciasDelTorneo

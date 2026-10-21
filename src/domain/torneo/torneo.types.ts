@@ -33,7 +33,10 @@ export interface Torneo {
 
   reglamento?: string;
 
-  contactoOrganizador: string;
+  organizadorIds?: string[];
+
+  /** Legacy contact retained for reading old documents; new records use organizadorIds. */
+  contactoOrganizador?: string;
 
   imagenUrl?: string;
 

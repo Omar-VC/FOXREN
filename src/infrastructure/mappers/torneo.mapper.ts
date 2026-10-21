@@ -1,9 +1,16 @@
 // src/infrastructure/mappers/torneo.mapper.ts
 
-import type { Torneo } from "../../domain/torneo/torneo.types";
+import type { EstadoTorneo, Torneo } from "../../domain/torneo/torneo.types";
+
+function convertirEstado(valor: unknown): EstadoTorneo {
+  return valor === "pendiente" || valor === "publicado" || valor === "en_curso" ||
+    valor === "finalizado" || valor === "cancelado"
+    ? valor
+    : "pendiente";
+}
 
 function convertirFechaFirestore(
-  fechaRaw: any
+  fechaRaw: unknown
 ): Date {
   if (!fechaRaw) {
     return new Date();
@@ -11,14 +18,17 @@ function convertirFechaFirestore(
 
   if (
     typeof fechaRaw === "object" &&
-    typeof fechaRaw.toDate === "function"
+    fechaRaw !== null &&
+    typeof (fechaRaw as { toDate?: unknown }).toDate === "function"
   ) {
-    return fechaRaw.toDate();
+    return (fechaRaw as { toDate: () => Date }).toDate();
   }
 
   if (
     typeof fechaRaw === "object" &&
-    "seconds" in fechaRaw
+    fechaRaw !== null &&
+    "seconds" in fechaRaw &&
+    typeof fechaRaw.seconds === "number"
   ) {
     return new Date(fechaRaw.seconds * 1000);
   }
@@ -27,19 +37,19 @@ function convertirFechaFirestore(
     return fechaRaw;
   }
 
-  return new Date(fechaRaw);
+  return new Date(fechaRaw as string | number);
 }
 
 export const mapDocToTorneo = (
   docId: string,
-  data: any
+  data: Record<string, unknown>
 ): Torneo => {
   return {
     id: docId,
-    nombre: data.nombre ?? "Torneo sin nombre",
-    circuitoId: data.circuitoId ?? "",
-    complejoId: data.complejoId ?? "",
-    descripcion: data.descripcion ?? undefined,
+    nombre: typeof data.nombre === "string" ? data.nombre : "Torneo sin nombre",
+    circuitoId: typeof data.circuitoId === "string" ? data.circuitoId : "",
+    complejoId: typeof data.complejoId === "string" ? data.complejoId : "",
+    descripcion: typeof data.descripcion === "string" ? data.descripcion : undefined,
 
     fechaInicio: convertirFechaFirestore(
       data.fechaInicio
@@ -49,34 +59,35 @@ export const mapDocToTorneo = (
       ? convertirFechaFirestore(data.fechaFin)
       : undefined,
 
-    montoInscripcionPorPareja:
-      data.montoInscripcionPorPareja ?? undefined,
+    montoInscripcionPorPareja: typeof data.montoInscripcionPorPareja === "number"
+      ? data.montoInscripcionPorPareja
+      : undefined,
 
-    cupoMaximoParejas:
-      data.cupoMaximoParejas ?? undefined,
+    cupoMaximoParejas: typeof data.cupoMaximoParejas === "number"
+      ? data.cupoMaximoParejas
+      : undefined,
 
-    modalidad: data.modalidad ?? "presencial",
+    modalidad: "presencial",
 
-    premios: data.premios ?? undefined,
+    premios: typeof data.premios === "string" ? data.premios : undefined,
 
-    reglamento:
-      data.reglamento ?? undefined,
+    reglamento: typeof data.reglamento === "string" ? data.reglamento : undefined,
 
-    contactoOrganizador:
-      data.contactoOrganizador ??
-      data.telefonoOrganizador ??
-      data.telefono ??
-      data.celular ??
-      "",
+    organizadorIds: Array.isArray(data.organizadorIds)
+      ? data.organizadorIds.filter((id): id is string => typeof id === "string")
+      : [],
 
-    imagenUrl:
-      data.imagenUrl ?? undefined,
+    contactoOrganizador: typeof data.contactoOrganizador === "string"
+      ? data.contactoOrganizador
+      : "",
 
-    estado:
-      data.estado ?? "pendiente",
+    imagenUrl: typeof data.imagenUrl === "string" ? data.imagenUrl : undefined,
 
-    puntajeRanking:
-      data.puntajeRanking ?? undefined,
+    estado: convertirEstado(data.estado),
+
+    puntajeRanking: typeof data.puntajeRanking === "number"
+      ? data.puntajeRanking
+      : undefined,
 
     fechaCreacion:
       convertirFechaFirestore(

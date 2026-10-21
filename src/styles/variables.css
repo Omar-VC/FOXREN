@@ -1,21 +1,21 @@
 :root {
-  /* Paleta Base Oscura */
-  --color-bg-main: #090d16;
-  --color-bg-surface: #0f172a;
-  --color-bg-card: #1e293b;
+  /* Identidad FOXREN */
+  --color-bg-main: #181818;
+  --color-bg-surface: #211b25;
+  --color-bg-card: #2b2530;
 
-  /* Acentos */
-  --color-primary: #10b981;      /* Emerald / Neón */
-  --color-accent: #f59e0b;       /* Amber / Trofeos */
+  /* Marca y acciones */
+  --color-primary: #660090;
+  --color-accent: #ff9f00;
   --color-danger: #ef4444;       /* Rojo alertas */
 
-  /* Textos y Bordes */
-  --color-text-main: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-border: #334155;
+  /* Texto y estructura */
+  --color-text-main: #ffffff;
+  --color-text-muted: #939393;
+  --color-border: #49414f;
 
   /* Estilos de Contenedor */
   --font-family-base: "Inter", system-ui, -apple-system, sans-serif;
   --border-radius: 12px;
-  --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 12px 30px -12px rgba(0, 0, 0, 0.8);
 }

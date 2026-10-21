@@ -4,7 +4,7 @@ import {
   getDocs,
   query,
   where,
-  writeBatch,
+  type Transaction,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
@@ -32,7 +32,10 @@ export const zonasRepository = {
     return zonas.length > 0;
   },
 
-  async crearZonasYPartidos(zonas: Zona[]): Promise<void> {
+  async crearZonasYPartidos(
+    zonas: Zona[],
+    transaction: Transaction,
+  ): Promise<void> {
     const zonaRefs = zonas.map(() =>
       doc(collection(db, COLLECTIONS.zonas)),
     );
@@ -44,24 +47,25 @@ export const zonasRepository = {
 
     const partidos = generarPartidosDeZonas(zonasConIds);
 
-    if (zonaRefs.length + partidos.length > 500) {
+    if (zonaRefs.length + partidos.length > 499) {
       throw new Error(
-        "La competencia genera demasiadas zonas y partidos para una única operación.",
+        "La competencia genera demasiadas zonas y partidos para una transacción de Firestore.",
       );
     }
 
-    const batch = writeBatch(db);
-
     zonasConIds.forEach((zona, indice) => {
-      const { id: _id, ...datos } = zona;
-      batch.set(zonaRefs[indice], datos);
+      const datos = {
+        competenciaId: zona.competenciaId,
+        nombre: zona.nombre,
+        parejaIds: zona.parejaIds,
+        orden: zona.orden,
+      };
+      transaction.set(zonaRefs[indice], datos);
     });
 
     for (const partido of partidos) {
       const partidoRef = doc(collection(db, COLLECTIONS.partidos));
-      batch.set(partidoRef, partido);
+      transaction.set(partidoRef, partido);
     }
-
-    await batch.commit();
   },
 };

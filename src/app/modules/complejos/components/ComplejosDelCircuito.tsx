@@ -34,15 +34,12 @@ export default function ComplejosDelCircuito({
 
       {!cargando &&
         complejos.length > 0 && (
-          <ul>
+          <ul className="fox-card-grid">
             {complejos.map((complejo) => (
-              <li key={complejo.id}>
+              <li className="fox-card" key={complejo.id}>
                 <strong>{complejo.nombre}</strong>
-                {" — "}
-                {complejo.ciudad},{" "}
-                {complejo.provincia}
-                {" — "}
-                {complejo.cantidadCanchas} canchas
+                <p className="fox-card-meta">{complejo.ciudad}, {complejo.provincia}</p>
+                <p>{complejo.cantidadCanchas} canchas</p>
               </li>
             ))}
           </ul>

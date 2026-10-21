@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
 
@@ -10,7 +10,7 @@ export function useJugador(id: string | undefined) {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
-  async function cargarJugador() {
+  const cargarJugador = useCallback(async () => {
     if (!id) {
       setJugador(null);
       setCargando(false);
@@ -36,7 +36,7 @@ export function useJugador(id: string | undefined) {
     } finally {
       setCargando(false);
     }
-  }
+  }, [id]);
 
   async function actualizarJugador(datos: Partial<Jugador>) {
     if (!id) {
@@ -65,8 +65,8 @@ export function useJugador(id: string | undefined) {
   }
 
   useEffect(() => {
-    cargarJugador();
-  }, [id]);
+    void Promise.resolve().then(cargarJugador);
+  }, [cargarJugador]);
 
   return {
     jugador,
@@ -74,5 +74,6 @@ export function useJugador(id: string | undefined) {
     error,
     guardando,
     actualizarJugador,
+    recargar: cargarJugador,
   };
 }

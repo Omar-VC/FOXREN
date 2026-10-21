@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { complejosRepository } from "../../../../infrastructure/repositories/complejosRepository";
 
@@ -10,7 +10,7 @@ export function useComplejos() {
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarComplejos() {
+  const cargarComplejos = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
@@ -24,7 +24,7 @@ export function useComplejos() {
     } finally {
       setCargando(false);
     }
-  }
+  }, []);
 
   async function crearComplejo(
     datos: Omit<Complejo, "id" | "fechaCreacion">
@@ -45,8 +45,8 @@ export function useComplejos() {
   }
 
   useEffect(() => {
-    cargarComplejos();
-  }, []);
+    void Promise.resolve().then(cargarComplejos);
+  }, [cargarComplejos]);
 
   return {
     complejos,

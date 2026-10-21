@@ -1,3 +1,5 @@
+import type { OrigenDecisionPublicacion } from "../jugador/jugador.types";
+
 export type EstadoSolicitudRegistro =
   | "pendiente"
   | "aprobada"
@@ -31,4 +33,16 @@ export interface SolicitudRegistro {
   fechaSolicitud: Date;
 
   fechaResolucion?: Date;
+
+  /** ID del jugador creado al aprobar; permite reconocer reintentos idempotentes. */
+  jugadorId?: string;
+
+  /** Opcionales para leer solicitudes antiguas; su ausencia nunca significa autorización. */
+  autorizaPublicacionPerfil?: boolean;
+
+  autorizaPublicacionApodo?: boolean;
+
+  fechaDecisionPublicacion?: Date;
+
+  origenDecisionPublicacion?: OrigenDecisionPublicacion;
 }

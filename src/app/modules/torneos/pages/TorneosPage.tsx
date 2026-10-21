@@ -22,16 +22,13 @@ export default function TorneosPage() {
       {torneos.length === 0 ? (
         <p>No hay torneos registrados.</p>
       ) : (
-        <ul>
+        <ul className="fox-card-grid">
           {torneos.map((torneo) => (
-            <li key={torneo.id}>
+            <li className="fox-card" key={torneo.id}>
               <Link to={`/torneos/${torneo.id}`}>
                 {torneo.nombre}
               </Link>
-
-              {" — "}
-
-              {torneo.estado}
+              <p className="fox-card-meta">{torneo.estado}</p>
             </li>
           ))}
         </ul>

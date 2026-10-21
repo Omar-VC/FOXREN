@@ -36,12 +36,12 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <section>
+    <section className="fox-auth-card">
       <h1>Acceso administrativo</h1>
 
       {error && <p>{error}</p>}
 
-      <form onSubmit={handleSubmit}>
+      <form className="fox-form" onSubmit={handleSubmit}>
         <div>
           <label>Email</label>
 

@@ -2,6 +2,7 @@ import type { Competencia } from "./competencia.types";
 import type { Jugador } from "../jugador/jugador.types";
 import type { Pareja } from "../pareja/pareja.types";
 import { obtenerValorCategoriaJugador } from "../jugador/categoriaJugador";
+import { reglamentoCompetenciaEsValido } from "./competencia.reglamento.rules";
 // ---------------------------------------------
 // Verificaciones de estado
 // ---------------------------------------------
@@ -213,6 +214,11 @@ export function validarPreparacionCompetencia(
   parejas: Pareja[],
 ): ValidacionPreparacionCompetenciaResultado {
   const errores: string[] = [];
+
+  if (!reglamentoCompetenciaEsValido(competencia.reglamento) ||
+      competencia.reglamento.estado !== "aprobado") {
+    errores.push("El reglamento deportivo debe estar completo y aprobado por el administrador.");
+  }
 
   if (competencia.estado !== "inscripciones_abiertas") {
     errores.push(

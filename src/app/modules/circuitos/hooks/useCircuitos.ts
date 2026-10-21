@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { circuitosRepository } from "../../../../infrastructure/repositories/circuitosRepository";
 
@@ -10,7 +10,7 @@ export function useCircuitos() {
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarCircuitos() {
+  const cargarCircuitos = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
@@ -24,7 +24,7 @@ export function useCircuitos() {
     } finally {
       setCargando(false);
     }
-  }
+  }, []);
 
   async function crearCircuito(
     datos: Omit<Circuito, "id" | "fechaCreacion">
@@ -45,8 +45,8 @@ export function useCircuitos() {
   }
 
   useEffect(() => {
-    cargarCircuitos();
-  }, []);
+    void Promise.resolve().then(cargarCircuitos);
+  }, [cargarCircuitos]);
 
   return {
     circuitos,

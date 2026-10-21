@@ -32,7 +32,7 @@ export default function CategoriaForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="fox-form" onSubmit={handleSubmit}>
       <div>
         <label>Nombre de la categoría</label>
 

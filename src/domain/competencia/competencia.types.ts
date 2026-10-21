@@ -13,6 +13,23 @@ export type GeneroCompetencia = "MASCULINO" | "FEMENINO" | "MIXTO";
 
 export type TipoReglaCategoria = "individual" | "suma";
 
+export type CriterioDesempateZona =
+  | "victorias"
+  | "diferencia_sets"
+  | "diferencia_games";
+
+export interface ReglamentoCompetencia {
+  origen: "foxren" | "reglamento_oficial" | "propuesta_organizador";
+  referencia: string;
+  estado: "pendiente_revision" | "aprobado";
+  criteriosDesempate: CriterioDesempateZona[];
+  empatePersistente:
+    | "partido_desempate"
+    | "enfrentamiento_directo"
+    | "sorteo"
+    | "resolucion_administrativa";
+}
+
 export interface Competencia {
   id: string;
 
@@ -43,4 +60,15 @@ export interface Competencia {
   precioInscripcionPorPareja: number;
 
   parejasClasificanPorZona?: number;
+
+  /** Regla deportiva acordada para esta competencia; opcional en documentos históricos. */
+  reglamento?: ReglamentoCompetencia;
+
+  organizadorIds?: string[];
+
+  /** Contador administrativo para serializar altas y validar el cupo. */
+  parejasActivasCount?: number;
+
+  /** Evita que dos procesos creen simultáneamente zonas para la competencia. */
+  zonasGeneradas?: boolean;
 }

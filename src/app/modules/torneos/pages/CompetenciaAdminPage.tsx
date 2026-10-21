@@ -12,14 +12,18 @@ import type { Partido } from "../../../../domain/partido/partido.types";
 import type { Pareja } from "../../../../domain/pareja/pareja.types";
 import type { Jugador } from "../../../../domain/jugador/jugador.types";
 import type { Zona } from "../../../../domain/competencia/competencia.zonas.types";
+import type { Resultado, TipoResultado } from "../../../../domain/resultado/resultado.types";
 
 import { partidosRepository } from "../../../../infrastructure/repositories/partidosRepository";
 import { parejasRepository } from "../../../../infrastructure/repositories/parejasRepository";
 import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
 import { zonasRepository } from "../../../../infrastructure/repositories/zonasRepository";
+import { resultadoRepository } from "../../../../infrastructure/repositories/resultadoRepository";
 import { registrarResultado } from "../../../../application/resultados/registrarResultado";
-import type { TipoResultado } from "../../../../domain/resultado/resultado.types";
+import { resolverSuspension } from "../../../../application/resultados/resolverSuspension";
 import type { SetResultado } from "../../../../domain/partido/partido.types";
+import TablaZonaAdmin from "../components/TablaZonaAdmin";
+import ReglamentoCompetenciaAdmin from "../components/ReglamentoCompetenciaAdmin";
 
 export default function CompetenciaAdminPage() {
   const { torneoId, competenciaId } = useParams();
@@ -37,6 +41,7 @@ export default function CompetenciaAdminPage() {
   const [parejas, setParejas] = useState<Pareja[]>([]);
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
+  const [resultados, setResultados] = useState<Resultado[]>([]);
   const [cargandoPartidos, setCargandoPartidos] = useState(true);
   const [errorPartidos, setErrorPartidos] = useState<string | null>(null);
   const [actualizacionPartidos, setActualizacionPartidos] = useState(0);
@@ -104,17 +109,25 @@ export default function CompetenciaAdminPage() {
         setCargandoPartidos(true);
         setErrorPartidos(null);
 
-        const [
-          partidosCargados,
-          parejasCargadas,
-          jugadoresCargados,
-          zonasCargadas,
-        ] = await Promise.all([
+        const [partidosCargados, parejasCargadas, zonasCargadas] = await Promise.all([
           partidosRepository.getByCompetencia(competenciaId),
           parejasRepository.obtenerPorCompetenciaId(competenciaId),
-          jugadoresRepository.obtenerJugadores(),
           zonasRepository.obtenerPorCompetenciaId(competenciaId),
         ]);
+
+        const resultadosCargados = await resultadoRepository.obtenerPorPartidoIds(
+          partidosCargados.map((partido) => partido.id),
+        );
+
+        const idsJugadores = Array.from(
+          new Set(
+            parejasCargadas.flatMap((pareja) => [
+              pareja.jugador1Id,
+              pareja.jugador2Id,
+            ]),
+          ),
+        );
+        const jugadoresCargados = await jugadoresRepository.obtenerPorIds(idsJugadores);
 
         if (cancelado) return;
 
@@ -127,6 +140,7 @@ export default function CompetenciaAdminPage() {
         setParejas(parejasCargadas);
         setJugadores(jugadoresCargados);
         setZonas(zonasCargadas);
+        setResultados(resultadosCargados);
       } catch {
         if (!cancelado) {
           setErrorPartidos(
@@ -145,7 +159,7 @@ export default function CompetenciaAdminPage() {
     return () => {
       cancelado = true;
     };
-  }, [competenciaId, actualizacionPartidos]);
+  }, [competenciaId, actualizacionPartidos, actualizacionParejas]);
 
   async function abrirInscripciones() {
     if (!competencia) return;
@@ -414,22 +428,25 @@ export default function CompetenciaAdminPage() {
         ganadorParejaId = ganadorEspecialId;
       }
 
-      await registrarResultado(
-        {
+      const datosResultado: Omit<Resultado, "id"> = {
           partidoId: partido.id,
           tipo: tipoResultado,
           sets,
           ganadorParejaId,
           oficial: resultadoOficial,
           fechaRegistro: new Date(),
-        },
-        {
+      };
+
+      if (partido.estado === "suspendido") {
+        await resolverSuspension(datosResultado);
+      } else {
+        await registrarResultado(datosResultado, {
           partidoId: partido.id,
           torneoId: competencia.torneoId,
           competenciaId: competencia.id,
           categoriaId: competencia.categoriaId,
-        },
-      );
+        });
+      }
 
       setMensajeResultado("Resultado registrado correctamente.");
       setPartidoSeleccionadoId("");
@@ -621,6 +638,17 @@ export default function CompetenciaAdminPage() {
 
       {/* Módulos de Operación */}
       <div className="pt-2">
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg mb-6">
+          <h2 className="text-lg font-semibold text-slate-100">Reglamento de esta competencia</h2>
+          <ReglamentoCompetenciaAdmin
+            key={competencia.id}
+            competenciaId={competencia.id}
+            inicial={competencia.reglamento}
+            onActualizado={(reglamento) => setCompetencia((actual) => actual
+              ? { ...actual, reglamento }
+              : actual)}
+          />
+        </div>
         <h2 className="text-xl font-semibold mb-4 text-slate-100 border-b border-[var(--color-border)] pb-2">
           Operación
         </h2>
@@ -642,11 +670,22 @@ export default function CompetenciaAdminPage() {
             <h3 className="text-lg font-semibold mb-4 text-slate-200">Zonas</h3>
             <ZonasCompetenciaAdmin
               competenciaId={competencia.id}
+              formato={competencia.formato}
               inscripcionesCerradas={
                 competencia.estado === "inscripciones_cerradas"
               }
               actualizacion={actualizacionParejas}
             />
+            {competencia.formato === "zonas_eliminacion_directa" && (
+              <TablaZonaAdmin
+                zonas={zonas}
+                partidos={partidos}
+                resultados={resultados}
+                parejasClasificanPorZona={competencia.parejasClasificanPorZona ?? 2}
+                reglamento={competencia.reglamento}
+                nombrePareja={nombrePareja}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -793,11 +832,11 @@ export default function CompetenciaAdminPage() {
                         "finalizado",
                         "walkover",
                         "abandono",
-                        "suspendido",
                       ].includes(partido.estado),
                   )
                   .map((partido) => (
                     <option key={partido.id} value={partido.id}>
+                      {partido.estado === "suspendido" ? "Resolver suspensión: " : ""}
                       {nombrePareja(partido.pareja1Id)} vs.{" "}
                       {nombrePareja(partido.pareja2Id)}
                     </option>

@@ -9,14 +9,17 @@ import {
   updateDoc,
   deleteDoc,
   Timestamp,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { COLLECTIONS } from "../firebase/collections";
 import type {
   Competencia,
   EstadoCompetencia,
+  ReglamentoCompetencia,
 } from "../../domain/competencia/competencia.types";
 import { competenciaMapper } from "../mappers/competencia.mapper";
+import { reglamentoCompetenciaEsValido } from "../../domain/competencia/competencia.reglamento.rules";
 
 export const competenciasRepository = {
   async crearCompetencia(datos: Omit<Competencia, "id">): Promise<string> {
@@ -70,6 +73,42 @@ export const competenciasRepository = {
       estado: nuevoEstado,
     });
   },
+
+  async guardarReglamento(
+    competenciaId: string,
+    reglamento: ReglamentoCompetencia,
+  ): Promise<void> {
+    if (!reglamentoCompetenciaEsValido(reglamento)) {
+      throw new Error("La configuración del reglamento no es válida.");
+    }
+    const docRef = doc(db, COLLECTIONS.competencias, competenciaId);
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(docRef);
+      if (!snapshot.exists()) throw new Error("No se encontró la competencia.");
+      const competencia = competenciaMapper.fromFirestore(snapshot.id, snapshot.data());
+      if (competencia.zonasGeneradas || competencia.estado !== "borrador") {
+        throw new Error("El reglamento solo se puede cambiar mientras la competencia está en borrador.");
+      }
+      transaction.update(docRef, { reglamento });
+    });
+  },
+
+  async aprobarReglamento(competenciaId: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.competencias, competenciaId);
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(docRef);
+      if (!snapshot.exists()) throw new Error("No se encontró la competencia.");
+      const competencia = competenciaMapper.fromFirestore(snapshot.id, snapshot.data());
+      const reglamento = competencia.reglamento;
+      if (!reglamento || reglamento.estado !== "pendiente_revision" || reglamento.origen === "foxren") {
+        throw new Error("No hay una propuesta pendiente de aprobación.");
+      }
+      if (competencia.zonasGeneradas || competencia.estado !== "borrador") {
+        throw new Error("El reglamento solo se puede aprobar mientras la competencia está en borrador.");
+      }
+      transaction.update(docRef, { "reglamento.estado": "aprobado" });
+    });
+  },
 };
 
 // Crear competencia
@@ -98,7 +137,7 @@ export const actualizarCompetencia = async (
   const competenciaRef = doc(db, COLLECTIONS.competencias, id);
   await updateDoc(
     competenciaRef,
-    competenciaMapper.toFirestore({ ...competencia, id } as Competencia),
+    competenciaMapper.toFirestorePatch(competencia),
   );
 };
 

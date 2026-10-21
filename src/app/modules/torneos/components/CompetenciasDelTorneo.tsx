@@ -34,14 +34,11 @@ export default function CompetenciasDelTorneo({
 
       {!cargando &&
         competencias.length > 0 && (
-          <ul>
+          <ul className="fox-card-grid">
             {competencias.map((competencia) => (
-              <li key={competencia.id}>
+              <li className="fox-card" key={competencia.id}>
                 <strong>{competencia.nombre}</strong>
-                {" — "}
-                {competencia.genero}
-                {" — "}
-                {competencia.estado}
+                <p className="fox-card-meta">{competencia.genero} · {competencia.estado}</p>
               </li>
             ))}
           </ul>

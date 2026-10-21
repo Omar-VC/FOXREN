@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { competenciasRepository } from "../../../../infrastructure/repositories/competenciasRepository";
 
@@ -10,7 +10,7 @@ export function useCompetenciasPorTorneo(torneoId: string) {
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function cargarCompetencias() {
+  const cargarCompetencias = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
@@ -26,7 +26,7 @@ export function useCompetenciasPorTorneo(torneoId: string) {
     } finally {
       setCargando(false);
     }
-  }
+  }, [torneoId]);
 
   async function crearCompetencia(
     datos: Omit<Competencia, "id">
@@ -47,10 +47,8 @@ export function useCompetenciasPorTorneo(torneoId: string) {
   }
 
   useEffect(() => {
-    if (torneoId) {
-      cargarCompetencias();
-    }
-  }, [torneoId]);
+    if (torneoId) void Promise.resolve().then(cargarCompetencias);
+  }, [cargarCompetencias, torneoId]);
 
   return {
     competencias,

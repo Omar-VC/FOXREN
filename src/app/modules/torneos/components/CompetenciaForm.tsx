@@ -2,6 +2,9 @@ import { useState } from "react";
 
 import type { Competencia } from "../../../../domain/competencia/competencia.types";
 import { useCategorias } from "../../categorias/hooks/useCategorias";
+import OrganizadorSelector from "../../../shared/OrganizadorSelector";
+import ReglamentoCompetenciaFieldset from "./ReglamentoCompetenciaFieldset";
+import { REGLAMENTO_BASE_FOXREN } from "../../../../domain/competencia/competencia.reglamento.rules";
 
 interface Props {
   torneoId: string;
@@ -20,11 +23,17 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [cupoMaximoParejas, setCupoMaximoParejas] = useState(16);
+  const [parejasClasificanPorZona, setParejasClasificanPorZona] = useState(2);
   const [formato, setFormato] = useState<Competencia["formato"]>(
     "zonas_eliminacion_directa",
   );
   const [precioInscripcionPorPareja, setPrecioInscripcionPorPareja] =
     useState(0);
+  const [organizadorIds, setOrganizadorIds] = useState<string[]>([]);
+  const [reglamento, setReglamento] = useState({
+    ...REGLAMENTO_BASE_FOXREN,
+    criteriosDesempate: [...REGLAMENTO_BASE_FOXREN.criteriosDesempate],
+  });
 
   const { categorias, cargando: cargandoCategorias } = useCategorias();
 
@@ -41,6 +50,9 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
       fechaFin: new Date(fechaFin),
       cupoMaximoParejas,
       precioInscripcionPorPareja,
+      parejasClasificanPorZona,
+      organizadorIds,
+      reglamento,
       tipoReglaCategoria,
       formato,
       valorReglaCategoria,
@@ -52,14 +64,20 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
     setFechaInicio("");
     setFechaFin("");
     setCupoMaximoParejas(16);
+    setParejasClasificanPorZona(2);
     setFormato("zonas_eliminacion_directa");
     setPrecioInscripcionPorPareja(0);
+    setOrganizadorIds([]);
+    setReglamento({
+      ...REGLAMENTO_BASE_FOXREN,
+      criteriosDesempate: [...REGLAMENTO_BASE_FOXREN.criteriosDesempate],
+    });
     setTipoReglaCategoria("individual");
     setValorReglaCategoria(0);
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="fox-form" onSubmit={handleSubmit}>
       <div>
         <label>Nombre de la competencia</label>
 
@@ -70,6 +88,21 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
           required
         />
       </div>
+
+      {formato === "zonas_eliminacion_directa" && (
+        <div>
+          <label htmlFor="parejasClasificanPorZona">Parejas que clasifican por zona</label>
+          <input
+            id="parejasClasificanPorZona"
+            type="number"
+            min="1"
+            max={Math.max(1, cupoMaximoParejas - 1)}
+            value={parejasClasificanPorZona}
+            onChange={(event) => setParejasClasificanPorZona(Number(event.target.value))}
+            required
+          />
+        </div>
+      )}
 
       <div>
         <label>Tipo de categoría</label>
@@ -227,6 +260,10 @@ export default function CompetenciaForm({ torneoId, creando, onCrear }: Props) {
           required
         />
       </div>
+
+      <OrganizadorSelector value={organizadorIds} onChange={setOrganizadorIds} label="Organizadores específicos de la competencia (se suman a los del torneo y circuito)" />
+
+      <ReglamentoCompetenciaFieldset value={reglamento} onChange={setReglamento} />
 
       <button type="submit" disabled={creando}>
         {creando ? "Creando..." : "Crear competencia"}

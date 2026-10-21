@@ -6,6 +6,7 @@ import {
   updateDoc,
   where,
   doc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
@@ -48,34 +49,21 @@ export const solicitudesRegistroRepository = {
     })) as SolicitudRegistro[];
   },
 
-  async obtenerPorDni(
-  dni: string
-): Promise<SolicitudRegistro[]> {
-  const q = query(
-    collection(
-      db,
-      COLLECTIONS.solicitudesRegistro
-    ),
-    where("dni", "==", dni)
-  );
-
-  const snapshot = await getDocs(q);
-
-  return snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...docSnap.data(),
-  })) as SolicitudRegistro[];
-},
-
   async crearSolicitud(
     datos: Omit<SolicitudRegistro, "id">
   ): Promise<string> {
+    const datosPersistidos = {
+      ...datos,
+      ...(datos.origenDecisionPublicacion === "formulario_publico"
+        ? { fechaDecisionPublicacion: serverTimestamp() }
+        : {}),
+    };
     const docRef = await addDoc(
       collection(
         db,
         COLLECTIONS.solicitudesRegistro
       ),
-      datos
+      datosPersistidos
     );
 
     return docRef.id;

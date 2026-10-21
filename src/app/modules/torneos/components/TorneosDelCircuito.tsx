@@ -34,12 +34,11 @@ export default function TorneosDelCircuito({
 
       {!cargando &&
         torneos.length > 0 && (
-          <ul>
+          <ul className="fox-card-grid">
             {torneos.map((torneo) => (
-              <li key={torneo.id}>
+              <li className="fox-card" key={torneo.id}>
                 <strong>{torneo.nombre}</strong>
-                {" — "}
-                {torneo.estado}
+                <p className="fox-card-meta">{torneo.estado}</p>
               </li>
             ))}
           </ul>

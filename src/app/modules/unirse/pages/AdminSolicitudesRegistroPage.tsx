@@ -50,6 +50,17 @@ export default function AdminSolicitudesRegistroPage() {
                 Estado: {solicitud.estado}
               </p>
 
+              <p>
+                Publicación del perfil: {solicitud.autorizaPublicacionPerfil === true &&
+                  solicitud.origenDecisionPublicacion === "formulario_publico" &&
+                  solicitud.fechaDecisionPublicacion
+                  ? `solicitada; pendiente de verificación${solicitud.autorizaPublicacionApodo ? " (incluye apodo)" : ""}`
+                  : solicitud.autorizaPublicacionPerfil === false &&
+                    solicitud.origenDecisionPublicacion === "formulario_publico"
+                    ? "no autorizada"
+                    : "sin decisión explícita registrada"}
+              </p>
+
               <button
                 type="button"
                 onClick={() => aprobarSolicitud(solicitud)}

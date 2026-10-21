@@ -1,0 +1,259 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Owner UID confirmed by the account owner for frp-santiago-del-estero.
+    // Confirm the target project and rule version again before any deployment.
+    function isOwner() {
+      return request.auth != null
+        && request.auth.uid == 'BF0KyHXXTAOOOw74ztc0clvg1XN2';
+    }
+
+    // Public projection reads remain closed until every projection has a
+    // verified publishing workflow and a tested schema. Owners retain access.
+    function publicDocument(fields) {
+      return false;
+    }
+
+    function validPublicDocument(fields) {
+      return request.resource.data.publicado == true
+        && request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validPublicRequest() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'nombre', 'apellido', 'dni', 'sexo', 'ciudad', 'provincia',
+          'ladoJuego', 'categoriaDeclarada', 'estado', 'fechaSolicitud',
+          'autorizaPublicacionPerfil', 'autorizaPublicacionApodo',
+          'fechaDecisionPublicacion', 'origenDecisionPublicacion'
+        ])
+        && data.keys().hasOnly([
+          'nombre', 'apellido', 'apodo', 'dni', 'sexo', 'ciudad',
+          'provincia', 'fechaNacimiento', 'ladoJuego', 'categoriaDeclarada',
+          'estado', 'fechaSolicitud', 'autorizaPublicacionPerfil',
+          'autorizaPublicacionApodo', 'fechaDecisionPublicacion',
+          'origenDecisionPublicacion'
+        ])
+        && data.nombre is string && data.nombre.size() > 0 && data.nombre.size() <= 100
+        && data.apellido is string && data.apellido.size() > 0 && data.apellido.size() <= 100
+        && data.dni is string && data.dni.size() > 0 && data.dni.size() <= 20
+        && data.sexo in ['masculino', 'femenino']
+        && data.ciudad is string && data.ciudad.size() > 0 && data.ciudad.size() <= 100
+        && data.provincia is string && data.provincia.size() > 0 && data.provincia.size() <= 100
+        && data.ladoJuego in ['drive', 'reves']
+        && data.categoriaDeclarada is string
+        && data.categoriaDeclarada.size() > 0 && data.categoriaDeclarada.size() <= 100
+        && data.estado == 'pendiente'
+        && data.fechaSolicitud is timestamp
+        && data.autorizaPublicacionPerfil is bool
+        && data.autorizaPublicacionApodo is bool
+        && (!data.autorizaPublicacionApodo || data.autorizaPublicacionPerfil)
+        && data.fechaDecisionPublicacion is timestamp
+        && data.origenDecisionPublicacion == 'formulario_publico'
+        && (!('apodo' in data) || (data.apodo is string && data.apodo.size() <= 100))
+        && (!('fechaNacimiento' in data) || data.fechaNacimiento is timestamp);
+    }
+
+    // Private source-of-truth collections: owner only.
+    match /jugadores/{id} {
+      allow read, write: if isOwner();
+    }
+    match /organizadores/{id} {
+      allow read, write: if isOwner();
+    }
+    match /circuitos/{id} {
+      allow read, write: if isOwner();
+    }
+    match /complejos/{id} {
+      allow read, write: if isOwner();
+    }
+    match /torneos/{id} {
+      allow read, write: if isOwner();
+    }
+    match /competencias/{id} {
+      allow read, write: if isOwner();
+    }
+    match /categorias/{id} {
+      allow read, write: if isOwner();
+    }
+    match /inscripciones/{id} {
+      allow read, write: if isOwner();
+    }
+    match /parejas/{id} {
+      allow read, write: if isOwner();
+    }
+    match /reservas_competencia/{id} {
+      allow read, write: if isOwner();
+    }
+    match /zonas/{id} {
+      allow read, write: if isOwner();
+    }
+    match /partidos/{id} {
+      allow read, write: if isOwner();
+    }
+    match /resultados/{id} {
+      allow read, write: if isOwner();
+    }
+    match /rankings/{id} {
+      allow read, write: if isOwner();
+    }
+    match /historial/{id} {
+      allow read, write: if isOwner();
+    }
+
+    // Public request intake is the only public write exception. Requests remain
+    // private, and only the owner may read, review, update, or delete them.
+    match /solicitudes_registro/{id} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwner() || validPublicRequest();
+    }
+
+    // Projection collections are not readable by visitors until their
+    // publishing and withdrawal workflows are implemented and tested.
+    match /jugadores_publicos/{id} {
+      // Reads and writes stay disabled until consent verification, withdrawal,
+      // and projection synchronization are implemented and tested.
+      allow read, create, update: if false;
+      allow delete: if isOwner();
+    }
+    match /organizadores_publicos/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'organizadorId', 'nombre', 'contactoPublico'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'organizadorId', 'nombre', 'contactoPublico'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /circuitos_publicos/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'circuitoId', 'nombre', 'descripcion', 'temporada', 'logoUrl'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'circuitoId', 'nombre', 'descripcion', 'temporada', 'logoUrl'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /complejos_publicos/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'complejoId', 'circuitoId', 'nombre', 'ciudad', 'provincia',
+        'ubicacion', 'contactoPublico', 'cantidadCanchas', 'tipoCanchas', 'servicios'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'complejoId', 'circuitoId', 'nombre', 'ciudad', 'provincia',
+        'ubicacion', 'contactoPublico', 'cantidadCanchas', 'tipoCanchas', 'servicios'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /torneos_publicos/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'torneoId', 'circuitoId', 'complejoId', 'nombre', 'descripcion',
+        'fechaInicio', 'fechaFin', 'montoInscripcionPorPareja', 'cupoMaximoParejas',
+        'modalidad', 'premios', 'reglamento', 'imagenUrl', 'organizadorIds'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'torneoId', 'circuitoId', 'complejoId', 'nombre', 'descripcion',
+        'fechaInicio', 'fechaFin', 'montoInscripcionPorPareja', 'cupoMaximoParejas',
+        'modalidad', 'premios', 'reglamento', 'imagenUrl', 'organizadorIds'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /competencias_publicas/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'competenciaId', 'torneoId', 'nombre', 'descripcion',
+        'categoriaId', 'formato', 'genero', 'estado', 'fechaInicio', 'fechaFin',
+        'cupoMaximoParejas', 'precioInscripcionPorPareja', 'organizadorIds'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'competenciaId', 'torneoId', 'nombre', 'descripcion',
+        'categoriaId', 'formato', 'genero', 'estado', 'fechaInicio', 'fechaFin',
+        'cupoMaximoParejas', 'precioInscripcionPorPareja', 'organizadorIds'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /categorias_publicas/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'categoriaId', 'nombre', 'descripcion'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'categoriaId', 'nombre', 'descripcion'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /inscripciones_publicas/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'inscripcionId', 'competenciaId', 'parejaId', 'estado'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'inscripcionId', 'competenciaId', 'parejaId', 'estado'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /parejas_publicas/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'parejaId', 'competenciaId', 'jugador1Id', 'jugador2Id', 'estado'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'parejaId', 'competenciaId', 'jugador1Id', 'jugador2Id', 'estado'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /zonas_publicas/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'zonaId', 'competenciaId', 'nombre', 'parejaIds'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'zonaId', 'competenciaId', 'nombre', 'parejaIds'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /partidos_publicos/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'partidoId', 'competenciaId', 'zonaId', 'faseId', 'pareja1Id',
+        'pareja2Id', 'estado', 'sets', 'ganadorParejaId', 'orden', 'fechaHora', 'cancha'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'partidoId', 'competenciaId', 'zonaId', 'faseId', 'pareja1Id',
+        'pareja2Id', 'estado', 'sets', 'ganadorParejaId', 'orden', 'fechaHora', 'cancha'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /resultados_publicos/{id} {
+      allow read: if isOwner() || (publicDocument([
+        'publicado', 'resultadoId', 'partidoId', 'tipo', 'sets', 'ganadorParejaId',
+        'oficial', 'fechaRegistro'
+      ]) && resource.data.oficial == true);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'resultadoId', 'partidoId', 'tipo', 'sets', 'ganadorParejaId',
+        'oficial', 'fechaRegistro'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /rankings_publicos/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'jugadorId', 'temporada', 'sexo', 'puntos', 'posicion', 'actualizadoEn'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'jugadorId', 'temporada', 'sexo', 'puntos', 'posicion', 'actualizadoEn'
+      ]);
+      allow delete: if isOwner();
+    }
+    match /historial_publico/{id} {
+      allow read: if isOwner() || publicDocument([
+        'publicado', 'jugadorId', 'torneoId', 'competenciaId', 'parejaId',
+        'categoriaId', 'fecha', 'resultado'
+      ]);
+      allow create, update: if isOwner() && validPublicDocument([
+        'publicado', 'jugadorId', 'torneoId', 'competenciaId', 'parejaId',
+        'categoriaId', 'fecha', 'resultado'
+      ]);
+      allow delete: if isOwner();
+    }
+
+    // No access is granted to collections not explicitly declared above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

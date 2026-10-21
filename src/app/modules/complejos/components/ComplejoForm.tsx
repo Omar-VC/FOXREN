@@ -42,7 +42,7 @@ export default function ComplejoForm({ creando, onCrear }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="fox-form" onSubmit={handleSubmit}>
       <div>
         <label>Nombre</label>
 

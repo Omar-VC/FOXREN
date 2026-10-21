@@ -12,16 +12,13 @@ export default function CircuitoList({ circuitos }: Props) {
   }
 
   return (
-    <ul>
+    <ul className="fox-card-grid">
       {circuitos.map((circuito) => (
-        <li key={circuito.id}>
+        <li className="fox-card" key={circuito.id}>
           <Link to={`/circuitos/${circuito.id}`}>
             {circuito.nombre}
           </Link>
-
-          {" — "}
-
-          {circuito.temporada}
+          <p className="fox-card-meta">Temporada {circuito.temporada}</p>
         </li>
       ))}
     </ul>
