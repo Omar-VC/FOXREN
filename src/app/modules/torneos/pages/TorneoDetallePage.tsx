@@ -69,13 +69,13 @@ export default function TorneoDetallePage() {
 
   const fechaInicioTexto = torneo.fechaInicio
     ? torneo.fechaInicio instanceof Date
-      ? torneo.fechaInicio.toLocaleDateString()
+      ? torneo.fechaInicio.toLocaleDateString( "es-AR", { timeZone: "UTC" })
       : String(torneo.fechaInicio)
     : "A confirmar";
 
   const fechaFinTexto = torneo.fechaFin
     ? torneo.fechaFin instanceof Date
-      ? torneo.fechaFin.toLocaleDateString()
+      ? torneo.fechaFin.toLocaleDateString("es-AR", { timeZone: "UTC" })
       : String(torneo.fechaFin)
     : null;
 

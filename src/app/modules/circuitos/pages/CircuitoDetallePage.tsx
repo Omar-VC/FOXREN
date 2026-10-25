@@ -59,9 +59,11 @@ export default function CircuitoDetallePage() {
     <div className="space-y-8">
       {/* Banner / Foto central relacionada a la región */}
       <div className="relative rounded-2xl overflow-hidden border border-[var(--color-border)] shadow-2xl bg-[#211b25] min-h-[16rem] flex flex-col justify-end p-6 md:p-8">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-overlay"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80')` }}
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80')`,
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/60 to-transparent" />
 
@@ -94,28 +96,40 @@ export default function CircuitoDetallePage() {
             <span>📍</span> Complejos Adheridos
           </h2>
           <span className="text-xs text-[var(--color-text-muted)] font-mono">
-            {complejos.length} {complejos.length === 1 ? "complejo" : "complejos"}
+            {complejos.length}{" "}
+            {complejos.length === 1 ? "complejo" : "complejos"}
           </span>
         </div>
 
-        {cargandoComplejos && <p className="text-muted text-sm">Cargando complejos...</p>}
-        {errorComplejos && <p className="text-red-500 text-sm">{errorComplejos}</p>}
+        {cargandoComplejos && (
+          <p className="text-muted text-sm">Cargando complejos...</p>
+        )}
+        {errorComplejos && (
+          <p className="text-red-500 text-sm">{errorComplejos}</p>
+        )}
 
         {!cargandoComplejos && complejos.length === 0 && (
           <div className="fox-card text-center py-6">
-            <p className="text-muted text-sm m-0">No hay complejos asociados a este circuito todavía.</p>
+            <p className="text-muted text-sm m-0">
+              No hay complejos asociados a este circuito todavía.
+            </p>
           </div>
         )}
 
         {complejos.length > 0 && (
           <div className="fox-card-grid">
             {complejos.map((complejo) => (
-              <article key={complejo.id} className="fox-card space-y-3 flex flex-col justify-between">
+              <article
+                key={complejo.id}
+                className="fox-card space-y-3 flex flex-col justify-between"
+              >
                 <div>
                   <div className="w-full h-28 rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-border)] flex items-center justify-center text-3xl mb-3 bg-gradient-to-br from-[#2b2530] to-[#181818]">
                     🏟️
                   </div>
-                  <h3 className="text-base font-bold text-white m-0">{complejo.nombre}</h3>
+                  <h3 className="text-base font-bold text-white m-0">
+                    {complejo.nombre}
+                  </h3>
                   <p className="text-xs text-[var(--color-text-muted)] mt-1 flex items-center gap-1">
                     <span>📍</span> {complejo.ciudad}, {complejo.provincia}
                   </p>
@@ -123,7 +137,9 @@ export default function CircuitoDetallePage() {
 
                 <div className="pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-text-muted)] flex items-center justify-between">
                   <span>Canchas disponibles:</span>
-                  <strong className="text-white font-mono">{complejo.cantidadCanchas ?? "N/D"}</strong>
+                  <strong className="text-white font-mono">
+                    {complejo.cantidadCanchas ?? "N/D"}
+                  </strong>
                 </div>
               </article>
             ))}
@@ -142,25 +158,33 @@ export default function CircuitoDetallePage() {
           </span>
         </div>
 
-        {cargandoTorneos && <p className="text-muted text-sm">Cargando torneos...</p>}
+        {cargandoTorneos && (
+          <p className="text-muted text-sm">Cargando torneos...</p>
+        )}
         {errorTorneos && <p className="text-red-500 text-sm">{errorTorneos}</p>}
 
         {!cargandoTorneos && torneos.length === 0 && (
           <div className="fox-card text-center py-6">
-            <p className="text-muted text-sm m-0">No hay torneos programados para este circuito.</p>
+            <p className="text-muted text-sm m-0">
+              No hay torneos programados para este circuito.
+            </p>
           </div>
         )}
 
         {torneos.length > 0 && (
           <div className="fox-card-grid">
             {torneos.map((torneo) => {
-              // Manejo seguro de la fecha por si es un objeto Date o string
+              // Manejo robusto de la fecha (Firestore Timestamp, Date o string)
               const fechaTexto = torneo.fechaInicio
                 ? typeof torneo.fechaInicio === "string"
                   ? torneo.fechaInicio
-                  : torneo.fechaInicio instanceof Date
-                  ? torneo.fechaInicio.toLocaleDateString()
-                  : String(torneo.fechaInicio)
+                  : (torneo.fechaInicio as any)?.toDate
+                    ? (torneo.fechaInicio as any)
+                        .toDate()
+                        .toLocaleDateString("es-AR", { timeZone: "UTC" })
+                    : torneo.fechaInicio instanceof Date
+                      ? torneo.fechaInicio.toLocaleDateString("es-AR", { timeZone: "UTC" })
+                      : String(torneo.fechaInicio)
                 : "A confirmar";
 
               return (
@@ -179,12 +203,15 @@ export default function CircuitoDetallePage() {
                   </div>
 
                   <p className="text-xs text-[var(--color-text-muted)] m-0">
-                    📅 Fecha de inicio: <strong className="text-white">{fechaTexto}</strong>
+                    📅 Fecha de inicio:{" "}
+                    <strong className="text-white">{fechaTexto}</strong>
                   </p>
 
                   <div className="pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-accent)] font-semibold flex items-center justify-between">
                     <span>Ver competencias y zonas</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform">
+                      →
+                    </span>
                   </div>
                 </Link>
               );

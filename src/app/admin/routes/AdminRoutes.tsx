@@ -6,6 +6,7 @@ import AdminInicioPage from "../pages/AdminInicioPage";
 import AdminCircuitosPage from "../../modules/circuitos/pages/AdminCircuitosPage";
 import AdminComplejosPage from "../../modules/complejos/pages/AdminComplejosPage";
 import AdminTorneosPage from "../../modules/torneos/pages/AdminTorneosPage";
+import AdminTorneoDetallePage from "../../modules/torneos/pages/AdminTorneoDetallePage"; // <-- Nombre claro y sin ambigüedades
 import AdminCategoriasPage from "../../modules/categorias/pages/AdminCategoriasPage";
 import AdminSolicitudesRegistroPage from "../../modules/unirse/pages/AdminSolicitudesRegistroPage";
 import AdminJugadoresPage from "../../modules/jugadores/pages/AdminJugadoresPage";
@@ -28,6 +29,7 @@ export default function AdminRoutes() {
         <Route path="/" element={<AdminInicioPage />} />
         <Route path="/circuitos" element={<AdminCircuitosPage />} />
         <Route path="/torneos" element={<AdminTorneosPage />} />
+        <Route path="/torneos/:torneoId" element={<AdminTorneoDetallePage />} /> {/* <-- Ruta específica del torneo */}
         <Route
           path="/torneos/:torneoId/competencias/:competenciaId"
           element={<CompetenciaAdminPage />}

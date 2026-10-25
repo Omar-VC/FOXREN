@@ -43,8 +43,12 @@ export default function TorneosPage() {
         <div className="fox-card-grid">
           {torneos.map((torneo) => {
             const fechaInicioTexto = torneo.fechaInicio
-              ? torneo.fechaInicio instanceof Date
-                ? torneo.fechaInicio.toLocaleDateString()
+              ? typeof torneo.fechaInicio === "string"
+                ? torneo.fechaInicio
+                : (torneo.fechaInicio as any)?.toDate
+                ? (torneo.fechaInicio as any).toDate().toLocaleDateString("es-AR", { timeZone: "UTC" })
+                : torneo.fechaInicio instanceof Date
+                ? torneo.fechaInicio.toLocaleDateString("es-AR", { timeZone: "UTC" })
                 : String(torneo.fechaInicio)
               : "A confirmar";
 
