@@ -1,7 +1,9 @@
 import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import ZonasCompetenciaAdmin from "./ZonasCompetenciaAdmin";
 import ParejasAdmin from "../components/ParejasAdmin";
 import TablaZonaAdmin from "../components/TablaZonaAdmin";
+import CuadroEliminacionDirecta from "../components/CuadroEliminacionDirecta";
 import EncabezadoCompetencia from "../components/EncabezadoCompetencia";
 import TarjetasEstadoInfo from "../components/TarjetasEstadoInfo";
 import BloqueVerificacion from "../components/BloqueVerificacion";
@@ -9,6 +11,7 @@ import ListaPartidos from "../components/ListaPartidos";
 import FormularioResultado from "../components/FormularioResultado";
 import { useCompetenciaAdmin } from "../hooks/useCompetenciaAdmin";
 import { useRegistroResultado } from "../hooks/useRegistroResultado";
+import { generarLlavesEliminacionDirecta } from "../../../../application/competencias/generarLlavesEliminacionDirecta";
 
 export default function CompetenciaAdminPage() {
   const { competenciaId } = useParams();
@@ -63,6 +66,28 @@ export default function CompetenciaAdminPage() {
     onExito: () => actualizarPartidos(),
   });
 
+  const [llavesGeneradas, setLlavesGeneradas] = useState<boolean>(false);
+  const [generandoLlaves, setGenerandoLlaves] = useState<boolean>(false);
+
+  async function generarLlaves() {
+    if (!competencia) return;
+    try {
+      setGenerandoLlaves(true);
+      await generarLlavesEliminacionDirecta(competencia.id);
+      setLlavesGeneradas(true);
+      actualizarPartidos();
+    } catch (err) {
+      // El error ya se maneja con mensajes en el caso de uso; lo dejamos silencioso aquí
+      // para no duplicar mensajes de error en la UI.
+    } finally {
+      setGenerandoLlaves(false);
+    }
+  }
+
+  useEffect(() => {
+    setLlavesGeneradas(partidos.length > 0);
+  }, [partidos]);
+
   if (cargando) {
     return (
       <div className="py-8 text-center text-slate-400">
@@ -114,25 +139,58 @@ export default function CompetenciaAdminPage() {
             />
 
             <div>
-              <ZonasCompetenciaAdmin
-                competenciaId={competencia.id}
-                formato={competencia.formato}
-                inscripcionesCerradas={
-                  competencia.estado === "inscripciones_cerradas"
-                }
-                actualizacion={actualizacionParejas}
-              />
-              {competencia.formato === "zonas_eliminacion_directa" && (
-                <TablaZonaAdmin
-                  zonas={zonas}
-                  partidos={partidos}
-                  resultados={resultados}
-                  parejasClasificanPorZona={
-                    competencia.parejasClasificanPorZona ?? 2
-                  }
-                  reglamento={competencia.reglamento}
-                  nombrePareja={nombrePareja}
-                />
+              {competencia.formato === "eliminacion_directa" ? (
+                <>
+                  {!llavesGeneradas ? (
+                    <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
+                      <h3 className="text-lg font-semibold mb-3 text-slate-100">
+                        Cuadro de Eliminación Directa
+                      </h3>
+                      <p className="text-sm text-slate-400 mb-4">
+                        Generá el cuadro de llaves para comenzar a cargar
+                        resultados. Se requiere una cantidad de parejas que sea
+                        potencia de 2 (2, 4, 8, 16...).
+                      </p>
+                      <button
+                        type="button"
+                        onClick={generarLlaves}
+                        disabled={generandoLlaves}
+                        className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                      >
+                        {generandoLlaves ? "Generando..." : "Generar llaves de eliminación directa"}
+                      </button>
+                    </div>
+                  ) : (
+                    <CuadroEliminacionDirecta
+                      partidos={partidos}
+                      nombrePareja={nombrePareja}
+                      actualizarPartidos={actualizarPartidos}
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <ZonasCompetenciaAdmin
+                    competenciaId={competencia.id}
+                    formato={competencia.formato}
+                    inscripcionesCerradas={
+                      competencia.estado === "inscripciones_cerradas"
+                    }
+                    actualizacion={actualizacionParejas}
+                  />
+                  {competencia.formato === "zonas_eliminacion_directa" && (
+                    <TablaZonaAdmin
+                      zonas={zonas}
+                      partidos={partidos}
+                      resultados={resultados}
+                      parejasClasificanPorZona={
+                        competencia.parejasClasificanPorZona ?? 2
+                      }
+                      reglamento={competencia.reglamento}
+                      nombrePareja={nombrePareja}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>

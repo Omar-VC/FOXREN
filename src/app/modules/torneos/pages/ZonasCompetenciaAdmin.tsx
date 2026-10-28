@@ -144,10 +144,12 @@ export default function ZonasCompetenciaAdmin({
       <h3>Zonas</h3>
 
       {formato === "eliminacion_directa" && (
-        <p>
-          Esta competencia usa eliminación directa. La generación automática de
-          llaves todavía no está disponible.
-        </p>
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
+          <p className="text-sm text-slate-400">
+            Esta competencia usa eliminación directa. El cuadro de llaves se
+            gestiona desde la sección de partidos.
+          </p>
+        </div>
       )}
 
       {error && <p role="alert">{error}</p>}
