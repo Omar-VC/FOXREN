@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { registrarResultado } from "../../../../application/resultados/registrarResultado";
 import { resolverSuspension } from "../../../../application/resultados/resolverSuspension";
+import { asignarGanadorARondaSiguiente } from "../../../../application/competencias/generarLlavesEliminacionDirecta";
 import type { Partido } from "../../../../domain/partido/partido.types";
 import type { SetResultado } from "../../../../domain/partido/partido.types";
 import type { TipoResultado } from "../../../../domain/resultado/resultado.types";
@@ -146,6 +147,10 @@ export function useRegistroResultado({
           (set) => set.juegosPareja1 > set.juegosPareja2,
         ).length;
 
+        if (!partido.pareja1Id || !partido.pareja2Id) {
+          throw new Error("El partido tiene parejas sin definir.");
+        }
+
         ganadorParejaId =
           setsGanadosPareja1 >= 2 ? partido.pareja1Id : partido.pareja2Id;
       } else if (tipoResultado === "walkover" || tipoResultado === "abandono") {
@@ -177,6 +182,30 @@ export function useRegistroResultado({
       }
 
       setMensajeResultado("Resultado registrado correctamente.");
+
+      // Propagar ganador a la siguiente ronda si es eliminación directa
+      if (
+        partido.tipoPartido === "eliminacion_directa" ||
+        partido.ronda !== undefined
+      ) {
+        if (ganadorParejaId) {
+          try {
+            await asignarGanadorARondaSiguiente(
+              competencia.id,
+              partido.id,
+              ganadorParejaId,
+            );
+          } catch (propagacionError) {
+            // No bloqueamos el flujo si falla la propagación;
+            // el resultado ya quedó guardado correctamente.
+            console.warn(
+              "No se pudo propagar el ganador a la siguiente ronda:",
+              propagacionError,
+            );
+          }
+        }
+      }
+
       setPartidoSeleccionadoId("");
       setGanadorEspecialId("");
       setCantidadSets(2);

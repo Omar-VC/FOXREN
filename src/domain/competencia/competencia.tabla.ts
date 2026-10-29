@@ -99,6 +99,11 @@ export function calcularTablaZona(
   let partidosPendientes = 0;
 
   for (const partido of partidosZona) {
+    // 🛡️ Agregar esta guarda para ignorar partidos de playoff sin parejas definidas
+    if (!partido.pareja1Id || !partido.pareja2Id) {
+      continue;
+    }
+
     if (!filas.has(partido.pareja1Id) || !filas.has(partido.pareja2Id) ||
         partido.pareja1Id === partido.pareja2Id) {
       throw new Error("El partido contiene parejas ajenas o repetidas en la zona.");

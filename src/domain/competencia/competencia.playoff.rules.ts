@@ -64,21 +64,23 @@ export function nombreFasePorRonda(
 /**
  * Genera los emparejamientos de una ronda de eliminación directa.
  * El emparejamiento estándar es: 1 vs N, 2 vs N-1, 3 vs N-2, etc.
- * Devuelve los partidos de esa ronda con sus parejas asignadas.
+ * Cuando esPlaceholder es true, los partidos se generan sin parejas asignadas
+ * (pareja1Id: null, pareja2Id: null) para que se completen después con los ganadores.
  */
 export function generarEmparejamientosRonda(
   parejasIds: string[],
   ronda: number,
   totalRondas: number,
   ordenInicial: number,
+  esPlaceholder: boolean = false,
 ): PartidoEliminacion[] {
   const fase = nombreFasePorRonda(ronda, totalRondas);
   const partidos: PartidoEliminacion[] = [];
   const mitad = parejasIds.length / 2;
 
   for (let i = 0; i < mitad; i++) {
-    const pareja1Id = parejasIds[i];
-    const pareja2Id = parejasIds[parejasIds.length - 1 - i];
+    const pareja1Id = esPlaceholder ? null : parejasIds[i];
+    const pareja2Id = esPlaceholder ? null : parejasIds[parejasIds.length - 1 - i];
 
     partidos.push({
       competenciaId: "", // Se completa en la capa de aplicación
@@ -117,17 +119,19 @@ export function generarCuadroEliminacion(
 
   // En cada ronda, los ganadores de la ronda anterior avanzan.
   // Para la ronda 1 usamos las parejas originales.
-  // Para rondas siguientes, los IDs son placeholders que se rellenarán
-  // cuando se conozcan los ganadores.
-  let parejasRondaActual = [...parejasIds];
+  // Para rondas siguientes, generamos partidos sin parejas asignadas (placeholders)
+  // que se completarán automáticamente cuando los partidos anteriores finalicen.
   let ordenGlobal = 1;
 
   for (let ronda = 1; ronda <= totalRondas; ronda++) {
+    const esPlaceholder = ronda > 1;
+
     const partidosRonda = generarEmparejamientosRonda(
-      parejasRondaActual,
+      parejasIds, // Se ignora cuando esPlaceholder es true
       ronda,
       totalRondas,
       ordenGlobal,
+      esPlaceholder,
     );
 
     // Asignar competenciaId a cada partido
@@ -137,12 +141,6 @@ export function generarCuadroEliminacion(
 
     todosLosPartidos.push(...partidosRonda);
     ordenGlobal += partidosRonda.length;
-
-    // Para la siguiente ronda, los IDs de parejas son placeholders
-    // (se usarán los IDs de los partidos generados como referencias lógicas)
-    if (ronda < totalRondas) {
-      parejasRondaActual = partidosRonda.map((p) => p.pareja1Id); // placeholder
-    }
   }
 
   return todosLosPartidos;

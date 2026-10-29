@@ -42,8 +42,37 @@ export default function CuadroEliminacionDirecta({
   );
 
   const obtenerPartidoConNombres = (partido: Partido) => {
-    const pareja1Nombre = nombrePareja(partido.pareja1Id);
-    const pareja2Nombre = nombrePareja(partido.pareja2Id);
+    const rondaActual = Number(partido.ronda ?? 0);
+    const partidosRondaAnterior = partidosPorRonda.get(rondaActual - 1) ?? [];
+
+    const obtenerPlaceholder = (esPareja1: boolean): string => {
+      const rondaAnterior = rondaActual - 1;
+      if (rondaAnterior < 1) {
+        return "Esperando ganador...";
+      }
+      const indicePartido = partido.partidoNumero ?? 1;
+      // Para pareja1 usamos el mismo número de partido de la ronda anterior;
+      // para pareja2 usamos el siguiente disponible.
+      const numeroReferencia = esPareja1
+        ? indicePartido
+        : Math.min(indicePartido + 1, partidosRondaAnterior.length);
+      const nombreFase =
+        rondaAnterior === 1
+          ? "Semifinal"
+          : rondaAnterior === 2
+            ? "Cuartos"
+            : `Ronda ${rondaAnterior}`;
+      return `Ganador ${nombreFase} ${numeroReferencia}`;
+    };
+
+    const pareja1Nombre =
+      partido.pareja1Id === null
+        ? obtenerPlaceholder(true)
+        : nombrePareja(partido.pareja1Id);
+    const pareja2Nombre =
+      partido.pareja2Id === null
+        ? obtenerPlaceholder(false)
+        : nombrePareja(partido.pareja2Id);
     let ganadorNombre: string | null = null;
     if (partido.ganadorParejaId) {
       ganadorNombre = nombrePareja(partido.ganadorParejaId);

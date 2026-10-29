@@ -66,24 +66,29 @@ export default function CompetenciaAdminPage() {
     onExito: () => actualizarPartidos(),
   });
 
-  const [llavesGeneradas, setLlavesGeneradas] = useState<boolean>(false);
+  const [llavesGeneradas, setLlavesGeneradas] = useState<boolean>(partidos.length > 0);
   const [generandoLlaves, setGenerandoLlaves] = useState<boolean>(false);
+  const [errorLlaves, setErrorLlaves] = useState<string | null>(null);
 
   async function generarLlaves() {
     if (!competencia) return;
+    setGenerandoLlaves(true);
+    setErrorLlaves(null);
     try {
-      setGenerandoLlaves(true);
       await generarLlavesEliminacionDirecta(competencia.id);
-      setLlavesGeneradas(true);
+      // Los partidos se cargarán reactivamente vía useCompetenciaAdmin
+      // cuando actualizarPartidos dispare la recarga.
       actualizarPartidos();
     } catch (err) {
-      // El error ya se maneja con mensajes en el caso de uso; lo dejamos silencioso aquí
-      // para no duplicar mensajes de error en la UI.
+      setErrorLlaves(
+        err instanceof Error ? err.message : "No se pudieron generar las llaves.",
+      );
     } finally {
       setGenerandoLlaves(false);
     }
   }
 
+  // Sincronizar llavesGeneradas con el estado real de partidos
   useEffect(() => {
     setLlavesGeneradas(partidos.length > 0);
   }, [partidos]);
@@ -159,6 +164,9 @@ export default function CompetenciaAdminPage() {
                       >
                         {generandoLlaves ? "Generando..." : "Generar llaves de eliminación directa"}
                       </button>
+                      {errorLlaves && (
+                        <p className="mt-3 text-sm text-red-300">{errorLlaves}</p>
+                      )}
                     </div>
                   ) : (
                     <CuadroEliminacionDirecta

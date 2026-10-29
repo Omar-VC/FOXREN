@@ -29,9 +29,9 @@ export interface Partido {
 
   faseId?: string;
 
-  pareja1Id: string;
+  pareja1Id: string | null;
 
-  pareja2Id: string;
+  pareja2Id: string | null;
 
   estado: EstadoPartido;
 

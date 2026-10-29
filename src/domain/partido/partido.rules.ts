@@ -5,6 +5,9 @@ import type { Partido } from "./partido.types";
 // ---------------------------------------------
 
 export function partidoEsValido(partido: Partido): boolean {
+  if (!partido.pareja1Id || !partido.pareja2Id) {
+    return false;
+  }
   return (
     partido.pareja1Id.trim() !== "" &&
     partido.pareja2Id.trim() !== "" &&

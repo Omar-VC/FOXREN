@@ -24,8 +24,8 @@ export default function ListaPartidos({
         <div>
           <h4 className="text-lg font-semibold text-slate-100">Partidos</h4>
           <p className="text-xs text-slate-400 mt-1">
-            {partidos.length} partido{partidos.length === 1 ? "" : "s"}{" "}
-            generado{partidos.length === 1 ? "" : "s"}
+            {partidos.length} partido{partidos.length === 1 ? "" : "s"} generado
+            {partidos.length === 1 ? "" : "s"}
           </p>
         </div>
 
@@ -75,22 +75,32 @@ export default function ListaPartidos({
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-slate-100 font-medium">
-                    {nombrePareja(partido.pareja1Id)}
+                    {partido.pareja1Id ? (
+                      nombrePareja(partido.pareja1Id)
+                    ) : (
+                      <span className="text-slate-500 italic">Por definir</span>
+                    )}
                   </p>
-                  {partido.ganadorParejaId === partido.pareja1Id && (
-                    <span className="text-xs text-emerald-400">Ganadora</span>
-                  )}
+                  {partido.pareja1Id &&
+                    partido.ganadorParejaId === partido.pareja1Id && (
+                      <span className="text-xs text-emerald-400">Ganadora</span>
+                    )}
                 </div>
 
                 <p className="text-xs font-semibold text-slate-500">VS</p>
 
                 <div>
                   <p className="text-slate-100 font-medium">
-                    {nombrePareja(partido.pareja2Id)}
+                    {partido.pareja2Id ? (
+                      nombrePareja(partido.pareja2Id)
+                    ) : (
+                      <span className="text-slate-500 italic">Por definir</span>
+                    )}
                   </p>
-                  {partido.ganadorParejaId === partido.pareja2Id && (
-                    <span className="text-xs text-emerald-400">Ganadora</span>
-                  )}
+                  {partido.pareja2Id &&
+                    partido.ganadorParejaId === partido.pareja2Id && (
+                      <span className="text-xs text-emerald-400">Ganadora</span>
+                    )}
                 </div>
               </div>
 

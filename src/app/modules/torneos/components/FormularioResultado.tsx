@@ -89,8 +89,8 @@ export default function FormularioResultado({
                   {partido.estado === "suspendido"
                     ? "Resolver suspensión: "
                     : ""}
-                  {nombrePareja(partido.pareja1Id)} vs.{" "}
-                  {nombrePareja(partido.pareja2Id)}
+                  {nombrePareja(partido.pareja1Id ?? "")} vs.{" "}
+                  {nombrePareja(partido.pareja2Id ?? "")}
                 </option>
               ))}
           </select>
@@ -145,8 +145,7 @@ export default function FormularioResultado({
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-xs text-slate-400">
                     {nombrePareja(
-                      partidos
-                        .find((p) => p.id === partidoSeleccionadoId)
+                      partidos.find((p) => p.id === partidoSeleccionadoId)
                         ?.pareja1Id ?? "",
                     )}
                     <input
@@ -169,8 +168,7 @@ export default function FormularioResultado({
 
                   <label className="text-xs text-slate-400">
                     {nombrePareja(
-                      partidos
-                        .find((p) => p.id === partidoSeleccionadoId)
+                      partidos.find((p) => p.id === partidoSeleccionadoId)
                         ?.pareja2Id ?? "",
                     )}
                     <input
@@ -200,9 +198,8 @@ export default function FormularioResultado({
                       </p>
 
                       <p className="text-xs text-slate-400">
-                        Ingresá los puntos del desempate. El set se
-                        completará automáticamente como 7-6 para la pareja
-                        ganadora.
+                        Ingresá los puntos del desempate. El set se completará
+                        automáticamente como 7-6 para la pareja ganadora.
                       </p>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -292,11 +289,15 @@ export default function FormularioResultado({
                 if (!partido) return null;
                 return (
                   <>
-                    <option value={partido.pareja1Id}>
-                      {nombrePareja(partido.pareja1Id)}
+                    <option value={partido.pareja1Id ?? ""}>
+                      {partido.pareja1Id
+                        ? nombrePareja(partido.pareja1Id)
+                        : "Por definir"}
                     </option>
-                    <option value={partido.pareja2Id}>
-                      {nombrePareja(partido.pareja2Id)}
+                    <option value={partido.pareja2Id ?? ""}>
+                      {partido.pareja2Id
+                        ? nombrePareja(partido.pareja2Id)
+                        : "Por definir"}
                     </option>
                   </>
                 );

@@ -5,8 +5,8 @@ export interface PartidoEliminacion {
   fase: FaseEliminacion;
   ronda: number;
   partidoNumero: number;
-  pareja1Id: string;
-  pareja2Id: string;
+  pareja1Id: string | null;
+  pareja2Id: string | null;
   estado: "pendiente" | "en_juego" | "finalizado" | "walkover" | "abandono" | "suspendido";
   sets: {
     setNumero: number;

@@ -87,7 +87,9 @@ export async function generarLlavesEliminacionDirecta(
 
     for (const partido of partidos) {
       const partidoRef = doc(collection(db, COLLECTIONS.partidos));
-      transaction.set(partidoRef, {
+
+      // Limpiar valores undefined para evitar errores de Firestore
+      const datosPartido: Record<string, unknown> = {
         competenciaId: partido.competenciaId,
         fase: partido.fase,
         ronda: partido.ronda,
@@ -96,13 +98,20 @@ export async function generarLlavesEliminacionDirecta(
         pareja2Id: partido.pareja2Id,
         estado: partido.estado,
         sets: partido.sets,
-        ganadorParejaId: partido.ganadorParejaId,
+        ganadorParejaId: partido.ganadorParejaId ?? null,
         orden: partido.orden,
-        fechaHora: partido.fechaHora,
-        cancha: partido.cancha,
-        notas: partido.notas,
+        fechaHora: partido.fechaHora ?? null,
+        cancha: partido.cancha ?? null,
+        notas: partido.notas ?? null,
         tipoPartido: "eliminacion_directa",
-      });
+      };
+
+      // Omitir campos con valor undefined (Firestore no los acepta)
+      const datosLimpios = Object.fromEntries(
+        Object.entries(datosPartido).filter(([, value]) => value !== undefined),
+      );
+
+      transaction.set(partidoRef, datosLimpios);
     }
   });
 
@@ -128,9 +137,13 @@ export async function asignarGanadorARondaSiguiente(
   const rondaOrigen = Number(partidoOrigen.ronda) ?? 0;
 
   // Buscar el partido de la siguiente ronda que debe recibir al ganador
+  // Los placeholders tienen pareja1Id o pareja2Id como null
   const partidoDestino = partidos.find((p) => {
     const rondaDestino = Number(p.ronda) ?? 0;
-    return rondaDestino === rondaOrigen + 1 && (p.pareja1Id === "" || p.pareja2Id === "");
+    return (
+      rondaDestino === rondaOrigen + 1 &&
+      (p.pareja1Id === null || p.pareja2Id === null)
+    );
   });
 
   if (!partidoDestino) {

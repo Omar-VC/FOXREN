@@ -168,6 +168,10 @@ export function calcularTablaPosicionesZona(
       return;
     }
 
+    if (!partido.pareja1Id || !partido.pareja2Id) {
+      return;
+    }
+
     const pareja1 =
       posicionesMap[partido.pareja1Id];
 
