@@ -76,7 +76,11 @@ export function generarEmparejamientosRonda(
 ): PartidoEliminacion[] {
   const fase = nombreFasePorRonda(ronda, totalRondas);
   const partidos: PartidoEliminacion[] = [];
-  const mitad = parejasIds.length / 2;
+  // En rondas placeholder (ronda > 1), la cantidad de partidos se reduce a la mitad en cada ronda:
+  // ronda 2 -> N/4, ronda 3 -> N/8, etc. Así la final siempre tiene 1 partido.
+  const mitad = esPlaceholder
+    ? Math.max(1, Math.floor(parejasIds.length / Math.pow(2, ronda)))
+    : parejasIds.length / 2;
 
   for (let i = 0; i < mitad; i++) {
     const pareja1Id = esPlaceholder ? null : parejasIds[i];

@@ -151,8 +151,8 @@ export async function asignarGanadorARondaSiguiente(
     return;
   }
 
-  // Determinar si se asigna a pareja1 o pareja2
-  const esPareja1Vacia = partidoDestino.pareja1Id === "" || partidoDestino.pareja1Id === "pendiente";
+  // Determinar si se asigna a pareja1 o pareja2 (los placeholders usan null)
+  const esPareja1Vacia = partidoDestino.pareja1Id === null;
 
   await partidosRepository.updateResultado(partidoDestino.id, {
     ...(esPareja1Vacia ? { pareja1Id: parejaGanadoraId } : { pareja2Id: parejaGanadoraId }),

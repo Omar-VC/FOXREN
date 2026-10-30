@@ -77,7 +77,7 @@ function validarTieBreak(
 export function validarPartidoEstandar(
   sets: SetResultado[],
 ): boolean {
-  if (sets.length !== 2 && sets.length !== 3) {
+  if (sets.length < 1 || sets.length > 3) {
     return false;
   }
 
@@ -99,11 +99,23 @@ export function validarPartidoEstandar(
       setsPareja2++;
     }
 
-    if (setsPareja1 === 2 || setsPareja2 === 2) {
+    // Si es partido a 1 set, cierra al finalizar el único set.
+    if (sets.length === 1) {
+      return i === sets.length - 1;
+    }
+
+    // Si es partido a 2 sets y alguien gana ambos, cierra el partido.
+    if (sets.length === 2 && (setsPareja1 === 2 || setsPareja2 === 2)) {
+      return i === sets.length - 1;
+    }
+
+    // Si es partido a 3 sets (mejor de 3), quien llegue a 2 sets cierra.
+    if (sets.length === 3 && (setsPareja1 === 2 || setsPareja2 === 2)) {
       return i === sets.length - 1;
     }
   }
 
+  // Con 2 sets y empate 1-1, el partido queda abierto para un tercer set.
   return false;
 }
 
@@ -111,10 +123,28 @@ export function validarTipoResultado(
   resultado: Omit<Resultado, "id">,
 ): boolean {
   if (resultado.tipo === "normal") {
-    return (
-      validarPartidoEstandar(resultado.sets) &&
-      Boolean(resultado.ganadorParejaId)
-    );
+    if (!validarPartidoEstandar(resultado.sets)) {
+      return false;
+    }
+
+    // Contar sets ganados por cada pareja.
+    const setsPareja1 = resultado.sets.filter(
+      (s) => s.juegosPareja1 > s.juegosPareja2,
+    ).length;
+    const setsPareja2 = resultado.sets.filter(
+      (s) => s.juegosPareja2 > s.juegosPareja1,
+    ).length;
+
+    // Si hay empate 1-1 en 2 sets, el partido queda abierto para tercer set;
+    // no se requiere ganadorParejaId todavía.
+    const empateEnDosSets =
+      resultado.sets.length === 2 && setsPareja1 === 1 && setsPareja2 === 1;
+
+    if (!empateEnDosSets && !Boolean(resultado.ganadorParejaId)) {
+      return false;
+    }
+
+    return true;
   }
 
   if (resultado.tipo === "walkover") {

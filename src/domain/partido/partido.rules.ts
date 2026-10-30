@@ -9,8 +9,8 @@ export function partidoEsValido(partido: Partido): boolean {
     return false;
   }
   return (
-    partido.pareja1Id.trim() !== "" &&
-    partido.pareja2Id.trim() !== "" &&
+    partido.pareja1Id!.trim() !== "" &&
+    partido.pareja2Id!.trim() !== "" &&
     partido.pareja1Id !== partido.pareja2Id
   );
 }

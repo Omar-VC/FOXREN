@@ -13,7 +13,7 @@ interface Props {
   partidos: Partido[];
   partidoSeleccionadoId: string;
   tipoResultado: TipoResultado;
-  cantidadSets: 2 | 3;
+  cantidadSets: 1 | 2 | 3;
   marcadores: MarcadorSet[];
   ganadorEspecialId: string;
   resultadoOficial: boolean;
@@ -22,7 +22,7 @@ interface Props {
   errorResultado: string | null;
   setPartidoSeleccionadoId: (id: string) => void;
   setTipoResultado: (tipo: TipoResultado) => void;
-  setCantidadSets: (cantidad: 2 | 3) => void;
+  setCantidadSets: (cantidad: 1 | 2 | 3) => void;
   setMarcadores: React.Dispatch<React.SetStateAction<MarcadorSet[]>>;
   setGanadorEspecialId: (id: string) => void;
   setResultadoOficial: (oficial: boolean) => void;
@@ -124,10 +124,11 @@ export default function FormularioResultado({
               <select
                 value={cantidadSets}
                 onChange={(e) =>
-                  setCantidadSets(Number(e.target.value) as 2 | 3)
+                  setCantidadSets(Number(e.target.value) as 1 | 2 | 3)
                 }
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white"
               >
+                <option value={1}>Un set</option>
                 <option value={2}>Dos sets</option>
                 <option value={3}>Tres sets</option>
               </select>

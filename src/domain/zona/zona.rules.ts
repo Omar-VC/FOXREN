@@ -173,10 +173,10 @@ export function calcularTablaPosicionesZona(
     }
 
     const pareja1 =
-      posicionesMap[partido.pareja1Id];
+      posicionesMap[partido.pareja1Id!];
 
     const pareja2 =
-      posicionesMap[partido.pareja2Id];
+      posicionesMap[partido.pareja2Id!];
 
     if (!pareja1 || !pareja2) {
       return;

@@ -3,7 +3,7 @@ import type { Partido } from "../../../../domain/partido/partido.types";
 
 interface Props {
   partidos: Partido[];
-  nombrePareja: (parejaId: string) => string;
+  nombrePareja: (parejaId: string | null) => string;
   actualizarPartidos: () => void;
 }
 

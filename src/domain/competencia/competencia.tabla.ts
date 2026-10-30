@@ -104,7 +104,7 @@ export function calcularTablaZona(
       continue;
     }
 
-    if (!filas.has(partido.pareja1Id) || !filas.has(partido.pareja2Id) ||
+    if (!filas.has(partido.pareja1Id!) || !filas.has(partido.pareja2Id!) ||
         partido.pareja1Id === partido.pareja2Id) {
       throw new Error("El partido contiene parejas ajenas o repetidas en la zona.");
     }
@@ -144,8 +144,8 @@ export function calcularTablaZona(
       throw new Error("El resultado oficial no coincide con el partido.");
     }
 
-    const fila1 = filas.get(partido.pareja1Id)!;
-    const fila2 = filas.get(partido.pareja2Id)!;
+    const fila1 = filas.get(partido.pareja1Id!)!;
+    const fila2 = filas.get(partido.pareja2Id!)!;
     fila1.partidosJugados++;
     fila2.partidosJugados++;
     if (resultado.ganadorParejaId === partido.pareja1Id) {

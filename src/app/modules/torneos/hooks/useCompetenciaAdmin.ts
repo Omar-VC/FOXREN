@@ -41,7 +41,7 @@ interface UseCompetenciaAdminReturn {
   actualizarParejas: () => void;
   setCompetencia: (updater: (actual: Competencia | null) => Competencia | null) => void;
   nombreJugador: (jugadorId: string) => string;
-  nombrePareja: (parejaId: string) => string;
+  nombrePareja: (parejaId: string | null) => string;
   nombreZona: (zonaId?: string) => string;
   etiquetaEstadoPartido: (estado: Partido["estado"]) => string;
 }
@@ -284,7 +284,8 @@ export function useCompetenciaAdmin(competenciaId: string): UseCompetenciaAdminR
     return `${jugador.nombre} ${jugador.apellido}`;
   }, [jugadores]);
 
-  const nombrePareja = useCallback((parejaId: string): string => {
+  const nombrePareja = useCallback((parejaId: string | null): string => {
+    if (!parejaId) return "Pareja por definir";
     const pareja = parejas.find((item) => item.id === parejaId);
     if (!pareja) return "Pareja no encontrada";
     return `${nombreJugador(pareja.jugador1Id)} / ${nombreJugador(

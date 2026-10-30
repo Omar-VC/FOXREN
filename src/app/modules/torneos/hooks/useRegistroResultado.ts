@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { registrarResultado } from "../../../../application/resultados/registrarResultado";
 import { resolverSuspension } from "../../../../application/resultados/resolverSuspension";
@@ -32,7 +32,7 @@ interface UseRegistroResultadoProps {
 interface UseRegistroResultadoReturn {
   partidoSeleccionadoId: string;
   tipoResultado: TipoResultado;
-  cantidadSets: 2 | 3;
+  cantidadSets: 1 | 2 | 3;
   marcadores: MarcadorSet[];
   ganadorEspecialId: string;
   resultadoOficial: boolean;
@@ -41,7 +41,7 @@ interface UseRegistroResultadoReturn {
   errorResultado: string | null;
   setPartidoSeleccionadoId: (id: string) => void;
   setTipoResultado: (tipo: TipoResultado) => void;
-  setCantidadSets: (cantidad: 2 | 3) => void;
+  setCantidadSets: (cantidad: 1 | 2 | 3) => void;
   setMarcadores: React.Dispatch<React.SetStateAction<MarcadorSet[]>>;
   setGanadorEspecialId: (id: string) => void;
   setResultadoOficial: (oficial: boolean) => void;
@@ -57,18 +57,33 @@ export function useRegistroResultado({
 }: UseRegistroResultadoProps): UseRegistroResultadoReturn {
   const [partidoSeleccionadoId, setPartidoSeleccionadoId] = useState("");
   const [tipoResultado, setTipoResultado] = useState<TipoResultado>("normal");
-  const [cantidadSets, setCantidadSets] = useState<2 | 3>(2);
+  const [cantidadSets, setCantidadSets] = useState<1 | 2 | 3>(2);
   const [marcadores, setMarcadores] = useState<MarcadorSet[]>([
     { ...MARCADOR_VACIO },
     { ...MARCADOR_VACIO },
     { ...MARCADOR_VACIO },
-  ]);
+  ].slice(0, 2));
   const [ganadorEspecialId, setGanadorEspecialId] = useState("");
   const [resultadoOficial, setResultadoOficial] = useState(true);
 
   const [guardandoResultado, setGuardandoResultado] = useState(false);
   const [mensajeResultado, setMensajeResultado] = useState<string | null>(null);
   const [errorResultado, setErrorResultado] = useState<string | null>(null);
+
+  // Sincronizar marcadores con la cantidad de sets seleccionada.
+  useEffect(() => {
+    setMarcadores((actual) =>
+      actual.slice(0, cantidadSets).length < cantidadSets
+        ? [
+            ...actual.slice(0, cantidadSets),
+            ...Array.from(
+              { length: cantidadSets - actual.slice(0, cantidadSets).length },
+              () => ({ ...MARCADOR_VACIO }),
+            ),
+          ]
+        : actual.slice(0, cantidadSets),
+    );
+  }, [cantidadSets]);
 
   async function guardarResultado() {
     if (!competencia) return;
@@ -146,13 +161,30 @@ export function useRegistroResultado({
         const setsGanadosPareja1 = sets.filter(
           (set) => set.juegosPareja1 > set.juegosPareja2,
         ).length;
+        const setsGanadosPareja2 = sets.filter(
+          (set) => set.juegosPareja2 > set.juegosPareja1,
+        ).length;
 
         if (!partido.pareja1Id || !partido.pareja2Id) {
           throw new Error("El partido tiene parejas sin definir.");
         }
 
-        ganadorParejaId =
-          setsGanadosPareja1 >= 2 ? partido.pareja1Id : partido.pareja2Id;
+        if (cantidadSets === 1) {
+          ganadorParejaId =
+            setsGanadosPareja1 >= 1 ? partido.pareja1Id! : partido.pareja2Id!;
+        } else if (cantidadSets === 2) {
+          if (setsGanadosPareja1 === 2) {
+            ganadorParejaId = partido.pareja1Id!;
+          } else if (setsGanadosPareja2 === 2) {
+            ganadorParejaId = partido.pareja2Id!;
+          }
+          // Con 2 sets y empate 1-1, ganadorParejaId queda undefined:
+          // el partido queda abierto para un tercer set.
+        } else {
+          // 3 sets: mejor de 3
+          ganadorParejaId =
+            setsGanadosPareja1 >= 2 ? partido.pareja1Id! : partido.pareja2Id!;
+        }
       } else if (tipoResultado === "walkover" || tipoResultado === "abandono") {
         if (!ganadorEspecialId) {
           throw new Error("Seleccioná la pareja ganadora.");
@@ -208,12 +240,10 @@ export function useRegistroResultado({
 
       setPartidoSeleccionadoId("");
       setGanadorEspecialId("");
-      setCantidadSets(2);
-      setMarcadores([
-        { ...MARCADOR_VACIO },
-        { ...MARCADOR_VACIO },
-        { ...MARCADOR_VACIO },
-      ]);
+      // Reset manteniendo la cantidad de sets actual.
+      setMarcadores(
+        Array.from({ length: cantidadSets }, () => ({ ...MARCADOR_VACIO })),
+      );
       onExito();
     } catch (err) {
       setErrorResultado(
