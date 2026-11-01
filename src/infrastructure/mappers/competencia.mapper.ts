@@ -1,7 +1,13 @@
 // src/infrastructure/mappers/competencia.mapper.ts
 
 import type { Competencia } from "../../domain/competencia/competencia.types";
+import type { FormatoPartido } from "../../domain/partido/partido.types";
 import { reglamentoCompetenciaEsValido } from "../../domain/competencia/competencia.reglamento.rules";
+
+/** Si falta o es inválido, "mejor_de_3": es lo que el sistema asumía antes de existir este campo. */
+function leerFormatoPartido(valor: unknown): FormatoPartido {
+  return valor === "un_set" || valor === "mejor_de_3" ? valor : "mejor_de_3";
+}
 
 function convertirFecha(valor: unknown): Date {
   if (valor instanceof Date) return valor;
@@ -36,6 +42,8 @@ export const competenciaMapper = {
       cupoMaximoParejas: competencia.cupoMaximoParejas,
       precioInscripcionPorPareja: competencia.precioInscripcionPorPareja,
       parejasClasificanPorZona: competencia.parejasClasificanPorZona ?? 2,
+      formatoPartidoZona: competencia.formatoPartidoZona ?? "mejor_de_3",
+      formatoPartidoPlayoff: competencia.formatoPartidoPlayoff ?? "mejor_de_3",
       ...(competencia.reglamento ? { reglamento: competencia.reglamento } : {}),
       ...(competencia.organizadorIds !== undefined
         ? { organizadorIds: [...new Set(competencia.organizadorIds)] }
@@ -58,6 +66,8 @@ export const competenciaMapper = {
       "cupoMaximoParejas",
       "precioInscripcionPorPareja",
       "parejasClasificanPorZona",
+      "formatoPartidoZona",
+      "formatoPartidoPlayoff",
       "reglamento",
       "formato",
       "organizadorIds",
@@ -98,7 +108,12 @@ export const competenciaMapper = {
       parejasActivasCount: Number.isInteger(doc.parejasActivasCount)
         ? doc.parejasActivasCount as number
         : undefined,
+      formatoPartidoZona: leerFormatoPartido(doc.formatoPartidoZona),
+      formatoPartidoPlayoff: leerFormatoPartido(doc.formatoPartidoPlayoff),
       zonasGeneradas: doc.zonasGeneradas === true,
+      playoffGenerado: doc.playoffGenerado === true,
+      semillaSorteo: typeof doc.semillaSorteo === "number" ? doc.semillaSorteo : undefined,
+      campeonParejaId: typeof doc.campeonParejaId === "string" ? doc.campeonParejaId : undefined,
       organizadorIds: Array.isArray(doc.organizadorIds)
         ? [...new Set<string>(doc.organizadorIds.filter((item): item is string => typeof item === "string"))]
         : [],

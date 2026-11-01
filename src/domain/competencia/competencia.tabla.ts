@@ -1,6 +1,6 @@
 import type { Resultado } from "../resultado/resultado.types";
 import { validarTipoResultado } from "../resultado/resultado.rules.ts";
-import type { Partido } from "../partido/partido.types";
+import type { FormatoPartido, Partido } from "../partido/partido.types";
 import type { Zona } from "./competencia.zonas.types";
 import type { CriterioDesempateZona } from "./competencia.types";
 import { CRITERIOS_DESEMPATE_BASE } from "./competencia.reglamento.rules.ts";
@@ -60,6 +60,8 @@ export function calcularTablaZona(
   partidos: Partido[],
   resultados: Resultado[],
   criteriosDesempate: CriterioDesempateZona[] = CRITERIOS_DESEMPATE_BASE,
+  /** Formato de partido de la fase de zonas. Por defecto "mejor_de_3" (comportamiento anterior). */
+  formatoPartido: FormatoPartido = "mejor_de_3",
 ): TablaZona {
   if (!criteriosValidos(criteriosDesempate)) {
     throw new Error("La configuración de criterios de desempate no es válida.");
@@ -119,7 +121,7 @@ export function calcularTablaZona(
       partidosPendientes++;
       continue;
     }
-    if (!validarTipoResultado(resultado)) {
+    if (!validarTipoResultado(resultado, formatoPartido)) {
       throw new Error("Un resultado no cumple las reglas deportivas del partido.");
     }
     const estadoEsperado = resultado.tipo === "normal"
@@ -163,6 +165,8 @@ export function calcularTablaZona(
       fila1.setsPerdidos += setsPareja2;
       fila2.setsGanados += setsPareja2;
       fila2.setsPerdidos += setsPareja1;
+      // El súper tie-break cuenta como set ganado (1-0) pero no suma games.
+      if (set.tipo === "super_tiebreak") continue;
       fila1.gamesGanados += set.juegosPareja1;
       fila1.gamesPerdidos += set.juegosPareja2;
       fila2.gamesGanados += set.juegosPareja2;

@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { registrarResultado } from "../../../../application/resultados/registrarResultado";
 import { resolverSuspension } from "../../../../application/resultados/resolverSuspension";
-import { asignarGanadorARondaSiguiente } from "../../../../application/competencias/generarLlavesEliminacionDirecta";
 import type { Partido } from "../../../../domain/partido/partido.types";
 import type { SetResultado } from "../../../../domain/partido/partido.types";
 import type { TipoResultado } from "../../../../domain/resultado/resultado.types";
@@ -181,30 +180,9 @@ export function useRegistroResultado({
         });
       }
 
+      // El avance del ganador, el campeón y el cierre de la competencia ya se
+      // resolvieron dentro de la transacción del resultado.
       setMensajeResultado("Resultado registrado correctamente.");
-
-      // Propagar ganador a la siguiente ronda si es eliminación directa
-      if (
-        partido.tipoPartido === "eliminacion_directa" ||
-        partido.ronda !== undefined
-      ) {
-        if (ganadorParejaId) {
-          try {
-            await asignarGanadorARondaSiguiente(
-              competencia.id,
-              partido.id,
-              ganadorParejaId,
-            );
-          } catch (propagacionError) {
-            // No bloqueamos el flujo si falla la propagación;
-            // el resultado ya quedó guardado correctamente.
-            console.warn(
-              "No se pudo propagar el ganador a la siguiente ronda:",
-              propagacionError,
-            );
-          }
-        }
-      }
 
       setPartidoSeleccionadoId("");
       setGanadorEspecialId("");
