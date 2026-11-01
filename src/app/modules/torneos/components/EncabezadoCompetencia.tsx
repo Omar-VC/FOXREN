@@ -11,33 +11,50 @@ interface Props {
 export default function EncabezadoCompetencia({
   competencia,
 }: Props) {
+  // Función auxiliar para formatear bonitamente el estado y darle color dinámico
+  const obtenerEstiloEstado = (estado: string) => {
+    switch (estado) {
+      case "en_curso":
+        return "bg-amber-500/10 text-amber-300 border-amber-500/30";
+      case "inscripciones_cerradas":
+        return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+      case "inscripciones_abiertas":
+        return "bg-sky-500/10 text-sky-300 border-sky-500/30";
+      case "finalizada":
+        return "bg-purple-500/10 text-purple-300 border-purple-500/30";
+      default:
+        return "bg-slate-800 text-slate-300 border-slate-700";
+    }
+  };
+
   return (
-    <div>
+    <div className="space-y-3">
       <Link
         to={`/admin/torneos`}
-        className="text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors inline-block mb-3"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-[var(--color-accent)] transition-colors bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--color-border)] px-3 py-1.5 rounded-lg w-fit"
       >
-        ← Volver a torneos
+        <span>←</span> Volver a torneos
       </Link>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="admin-page-title">{competencia.nombre}</h1>
-          <p className="admin-page-description">
-            Centro operativo de la competencia.
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+            {competencia.nombre}
+          </h1>
+          <p className="text-sm text-slate-400 mt-0.5">
+            Centro operativo y gestión general de la competencia.
           </p>
         </div>
 
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-            competencia.estado === "inscripciones_cerradas"
-              ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-              : competencia.estado === "inscripciones_abiertas"
-                ? "bg-sky-950 text-sky-300 border border-sky-800"
-                : "bg-slate-800 text-slate-300 border border-slate-700"
-          }`}
-        >
-          {competencia.estado.replace("_", " ")}
-        </span>
+        <div className="flex items-center self-start md:self-auto">
+          <span
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${obtenerEstiloEstado(
+              competencia.estado
+            )}`}
+          >
+            ● {competencia.estado.replaceAll("_", " ")}
+          </span>
+        </div>
       </div>
     </div>
   );

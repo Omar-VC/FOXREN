@@ -78,8 +78,6 @@ export default function CompetenciaAdminPage() {
     setErrorLlaves(null);
     try {
       await generarLlavesEliminacionDirecta(competencia.id);
-      // Los partidos se cargarán reactivamente vía useCompetenciaAdmin
-      // cuando actualizarPartidos dispare la recarga.
       actualizarPartidos();
     } catch (err) {
       setErrorLlaves(
@@ -92,126 +90,133 @@ export default function CompetenciaAdminPage() {
     }
   }
 
-  // Sincronizar llavesGeneradas con el estado real de partidos
   useEffect(() => {
     setLlavesGeneradas(partidos.length > 0);
   }, [partidos]);
 
   if (cargando) {
     return (
-      <div className="py-8 text-center text-slate-400">
-        Cargando competencia...
+      <div className="py-12 text-center text-slate-400 font-medium">
+        Cargando panel de competencia...
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-950/50 border border-red-500/40 text-red-200 rounded-xl mb-4">
+      <div className="p-4 bg-red-950/40 border border-red-500/30 text-red-200 rounded-xl mb-4 text-sm">
         {error}
       </div>
     );
   }
 
   if (!competencia) {
-    return <p className="text-slate-400">Competencia no encontrada.</p>;
+    return <p className="text-slate-400 text-center py-8">Competencia no encontrada.</p>;
   }
 
   return (
-    <section className="space-y-6">
-      <EncabezadoCompetencia competencia={competencia} />
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {/* Panel Superior Unificado (Header + Estado + Verificación) */}
+      <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl p-6 shadow-xl space-y-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[var(--color-primary)]/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+        
+        <EncabezadoCompetencia competencia={competencia} />
 
-      <TarjetasEstadoInfo
-        competencia={competencia}
-        abrirInscripciones={abrirInscripciones}
-        preparar={preparar}
-        cambiandoEstado={cambiandoEstado}
-        preparando={preparando}
-      />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-[var(--color-border)]">
+          <TarjetasEstadoInfo
+            competencia={competencia}
+            abrirInscripciones={abrirInscripciones}
+            preparar={preparar}
+            cambiandoEstado={cambiandoEstado}
+            preparando={preparando}
+          />
+          <BloqueVerificacion
+            resultadoPreparacion={resultadoPreparacion}
+            copiarInforme={copiarInforme}
+            cerrarInscripciones={cerrarInscripciones}
+            cambiandoEstado={cambiandoEstado}
+            informeCopiado={informeCopiado}
+          />
+        </div>
+      </div>
 
-      <BloqueVerificacion
-        resultadoPreparacion={resultadoPreparacion}
-        copiarInforme={copiarInforme}
-        cerrarInscripciones={cerrarInscripciones}
-        cambiandoEstado={cambiandoEstado}
-        informeCopiado={informeCopiado}
-      />
-
-      <div className="pt-2">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Sección Principal de Gestión: Parejas, Zonas y Cuadros */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl p-6 shadow-xl">
           <ParejasAdmin
             competenciaId={competencia.id}
             onParejaRegistrada={() => {
               actualizarParejas();
             }}
           />
-
-          <div>
-            {competencia.formato === "eliminacion_directa" ? (
-              <>
-                {!llavesGeneradas ? (
-                  <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
-                    <h3 className="text-lg font-semibold mb-3 text-slate-100">
-                      Cuadro de Eliminación Directa
-                    </h3>
-                    <p className="text-sm text-slate-400 mb-4">
-                      Generá el cuadro de llaves para comenzar a cargar
-                      resultados. Se requiere una cantidad de parejas que sea
-                      potencia de 2 (2, 4, 8, 16...).
-                    </p>
-                    <button
-                      type="button"
-                      onClick={generarLlaves}
-                      disabled={generandoLlaves}
-                      className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                    >
-                      {generandoLlaves
-                        ? "Generando..."
-                        : "Generar llaves de eliminación directa"}
-                    </button>
-                    {errorLlaves && (
-                      <p className="mt-3 text-sm text-red-300">{errorLlaves}</p>
-                    )}
-                  </div>
-                ) : (
-                  <CuadroEliminacionDirecta
-                    partidos={partidos}
-                    nombrePareja={nombrePareja}
-                    actualizarPartidos={actualizarPartidos}
-                  />
-                )}
-              </>
-            ) : (
-              <>
-                <ZonasCompetenciaAdmin
-                  competenciaId={competencia.id}
-                  formato={competencia.formato}
-                  inscripcionesCerradas={
-                    competencia.estado === "inscripciones_cerradas"
-                  }
-                  actualizacion={actualizacionParejas}
-                />
-                {competencia.formato === "zonas_eliminacion_directa" && (
-                  <TablaZonaAdmin
-                    zonas={zonas}
-                    partidos={partidos}
-                    resultados={resultados}
-                    parejasClasificanPorZona={
-                      competencia.parejasClasificanPorZona ?? 2
-                    }
-                    formatoPartidoZona={
-                      competencia.formatoPartidoZona ?? "mejor_de_3"
-                    } 
-                    reglamento={competencia.reglamento}
-                    nombrePareja={nombrePareja}
-                  />
-                )}
-              </>
-            )}
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl p-6 shadow-xl space-y-6">
+          {competencia.formato === "eliminacion_directa" ? (
+            <>
+              {!llavesGeneradas ? (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-slate-100">
+                    Cuadro de Eliminación Directa
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Generá el cuadro de llaves para comenzar a cargar resultados. Se requiere una cantidad de parejas que sea potencia de 2 (2, 4, 8, 16...).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={generarLlaves}
+                    disabled={generandoLlaves}
+                    className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors shadow-lg shadow-emerald-900/20"
+                  >
+                    {generandoLlaves
+                      ? "Generando..."
+                      : "Generar llaves de eliminación directa"}
+                  </button>
+                  {errorLlaves && (
+                    <p className="text-sm text-red-400 font-medium">{errorLlaves}</p>
+                  )}
+                </div>
+              ) : (
+                <CuadroEliminacionDirecta
+                  partidos={partidos}
+                  nombrePareja={nombrePareja}
+                  actualizarPartidos={actualizarPartidos}
+                />
+              )}
+            </>
+          ) : (
+            <div className="space-y-6">
+              <ZonasCompetenciaAdmin
+                competenciaId={competencia.id}
+                formato={competencia.formato}
+                inscripcionesCerradas={
+                  competencia.estado === "inscripciones_cerradas"
+                }
+                actualizacion={actualizacionParejas}
+              />
+              {competencia.formato === "zonas_eliminacion_directa" && (
+                <TablaZonaAdmin
+                  zonas={zonas}
+                  partidos={partidos}
+                  resultados={resultados}
+                  parejasClasificanPorZona={
+                    competencia.parejasClasificanPorZona ?? 2
+                  }
+                  formatoPartidoZona={
+                    competencia.formatoPartidoZona ?? "mejor_de_3"
+                  } 
+                  reglamento={competencia.reglamento}
+                  nombrePareja={nombrePareja}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sección Operativa de Partidos y Resultados */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pt-4">
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl p-6 shadow-xl">
           <ListaPartidos
             partidos={partidos}
             actualizarPartidos={actualizarPartidos}
@@ -221,7 +226,9 @@ export default function CompetenciaAdminPage() {
             nombreZona={nombreZona}
             etiquetaEstadoPartido={etiquetaEstadoPartido}
           />
+        </div>
 
+        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl p-6 shadow-xl">
           <FormularioResultado
             partidos={partidos}
             partidoSeleccionadoId={partidoSeleccionadoId}
@@ -246,6 +253,6 @@ export default function CompetenciaAdminPage() {
           />
         </div>
       </div>
-    </section>
+    </div>
   );
 }
