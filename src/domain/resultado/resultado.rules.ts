@@ -2,7 +2,7 @@ import type { FormatoPartido, SetResultado } from "../partido/partido.types";
 import type { Resultado } from "./resultado.types";
 
 /* ------------------------------------------------------------------ */
-/* Validación de sets individuales                                     */
+/* Validación de sets individuales                                    */
 /* ------------------------------------------------------------------ */
 
 function validarPuntosTieBreak(
@@ -88,12 +88,11 @@ export function validarSet(set: SetResultado): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/* Evaluación de un marcador completo según el formato                 */
+/* Evaluación de un marcador completo según el formato                */
 /* ------------------------------------------------------------------ */
 
 export interface EvaluacionMarcador {
   valido: boolean;
-  /** 1 o 2 según qué pareja ganó; null si el marcador no es válido. */
   ganador: 1 | 2 | null;
   error?: string;
 }
@@ -102,12 +101,6 @@ function invalido(error: string): EvaluacionMarcador {
   return { valido: false, ganador: null, error };
 }
 
-/**
- * Única fuente de verdad para saber si un marcador es válido y quién ganó.
- *  - un_set: exactamente 1 set de games.
- *  - mejor_de_3: gana quien gane 2 sets. Con 1-1 se juega un tercer set de
- *    games o un súper tie-break (solo como tercer set).
- */
 export function evaluarMarcador(
   sets: SetResultado[],
   formato: FormatoPartido,
@@ -163,11 +156,6 @@ export function evaluarMarcador(
   );
 }
 
-/**
- * Devuelve el id de la pareja ganadora según el marcador, o null si el marcador
- * no es válido. Reemplaza los cálculos duplicados del hook, registrarResultado
- * y resolverSuspension.
- */
 export function calcularGanadorDesdeSets(
   sets: SetResultado[],
   formato: FormatoPartido,
@@ -188,13 +176,9 @@ export interface ValidacionResultado {
   error?: string;
 }
 
-/**
- * `formato` por defecto es "mejor_de_3", que es lo que el sistema asumía hasta
- * ahora (compatibilidad con competencias existentes).
- */
 export function validarResultado(
   resultado: Omit<Resultado, "id">,
-  formato: FormatoPartido = "mejor_de_3",
+  formato: FormatoPartido,
 ): ValidacionResultado {
   switch (resultado.tipo) {
     case "normal": {
@@ -225,15 +209,13 @@ export function validarResultado(
   }
 }
 
-/** Compatibilidad: misma firma que antes (boolean). */
 export function validarTipoResultado(
   resultado: Omit<Resultado, "id">,
-  formato: FormatoPartido = "mejor_de_3",
+  formato: FormatoPartido,
 ): boolean {
   return validarResultado(resultado, formato).valido;
 }
 
-/** Compatibilidad: antes validaba solo mejor de 3. */
 export function validarPartidoEstandar(sets: SetResultado[]): boolean {
   return evaluarMarcador(sets, "mejor_de_3").valido;
 }

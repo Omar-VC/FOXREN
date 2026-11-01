@@ -1,5 +1,5 @@
 import { calcularTablaZona, clasificarParejasZona } from "../../../../domain/competencia/competencia.tabla";
-import type { Partido } from "../../../../domain/partido/partido.types";
+import type { Partido, FormatoPartido } from "../../../../domain/partido/partido.types";
 import type { Resultado } from "../../../../domain/resultado/resultado.types";
 import type { Zona } from "../../../../domain/competencia/competencia.zonas.types";
 import type { ReglamentoCompetencia } from "../../../../domain/competencia/competencia.types";
@@ -9,6 +9,7 @@ interface Props {
   partidos: Partido[];
   resultados: Resultado[];
   parejasClasificanPorZona: number;
+  formatoPartidoZona: FormatoPartido;
   reglamento?: ReglamentoCompetencia;
   nombrePareja: (parejaId: string) => string;
 }
@@ -18,6 +19,7 @@ export default function TablaZonaAdmin({
   partidos,
   resultados,
   parejasClasificanPorZona,
+  formatoPartidoZona, // 👈 Recibido en las props
   reglamento,
   nombrePareja,
 }: Props) {
@@ -41,6 +43,7 @@ export default function TablaZonaAdmin({
             partidos,
             resultados,
             reglamento.criteriosDesempate,
+            formatoPartidoZona, // 👈 Pasado como quinto argumento obligatorio
           );
           const clasificacion = tabla.completa
             ? clasificarParejasZona(
