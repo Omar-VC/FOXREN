@@ -10,6 +10,7 @@ import { zonasRepository } from "../../infrastructure/repositories/zonasReposito
 import { partidoMapper } from "../../infrastructure/mappers/partido.mapper";
 
 import { planificarPlayoff } from "../../domain/competencia/competencia.playoff.preparacion";
+import { semillaDesdeTexto } from "../../domain/competencia/competencia.playoff.rules";
 
 export interface ResultadoGeneracionPlayoff {
   cantidadPartidos: number;
@@ -69,7 +70,12 @@ export async function generarPlayoffCompetencia(
         partidos.filter((partido) => partido.zonaId).map((partido) => partido.id),
       );
 
-  const semilla = Math.floor(Math.random() * 2_147_483_647);
+  // Eliminación directa pura: sorteo (semilla al azar, queda guardada para reproducirlo).
+  // Zonas + playoff: la semilla solo desempata parejas con igual rendimiento y se
+  // deriva de la competencia, así la vista previa de la pantalla coincide con lo generado.
+  const semilla = esDirecta
+    ? Math.floor(Math.random() * 2_147_483_647)
+    : semillaDesdeTexto(competenciaId);
 
   const plan = planificarPlayoff({
     competenciaId,
@@ -127,7 +133,7 @@ export async function generarPlayoffCompetencia(
     transaction.update(competenciaRef, {
       playoffGenerado: true,
       estado: "en_curso",
-      ...(esDirecta ? { semillaSorteo: semilla } : {}),
+      semillaSorteo: semilla,
     });
   });
 

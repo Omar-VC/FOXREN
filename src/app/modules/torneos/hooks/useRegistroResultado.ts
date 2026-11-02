@@ -1,26 +1,33 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 import { registrarResultado } from "../../../../application/resultados/registrarResultado";
 import { resolverSuspension } from "../../../../application/resultados/resolverSuspension";
-import type { Partido } from "../../../../domain/partido/partido.types";
-import type { SetResultado } from "../../../../domain/partido/partido.types";
-import type { TipoResultado } from "../../../../domain/resultado/resultado.types";
-import type { Resultado } from "../../../../domain/resultado/resultado.types";
+import type { FormatoPartido, Partido, SetResultado } from "../../../../domain/partido/partido.types";
+import type { Resultado, TipoResultado } from "../../../../domain/resultado/resultado.types";
 import type { Competencia } from "../../../../domain/competencia/competencia.types";
+import { formatoDelPartido } from "../../../../domain/resultado/resultado.cierre";
+import {
+  MARCADOR_SET_VACIO,
+  cantidadSetsVisibles,
+  construirMarcador,
+} from "../../../../domain/resultado/resultado.marcador";
+import type {
+  MarcadorSetTexto,
+  TipoTercerSet,
+} from "../../../../domain/resultado/resultado.marcador";
 
-type MarcadorSet = {
-  juegosPareja1: string;
-  juegosPareja2: string;
-  tieBreakPareja1: string;
-  tieBreakPareja2: string;
-};
+export type VistaPreviaMarcador =
+  | { ok: true; ganador: 1 | 2 }
+  | { ok: false; error: string };
 
-const MARCADOR_VACIO: MarcadorSet = {
-  juegosPareja1: "",
-  juegosPareja2: "",
-  tieBreakPareja1: "",
-  tieBreakPareja2: "",
-};
+function marcadoresVacios(): MarcadorSetTexto[] {
+  return [
+    { ...MARCADOR_SET_VACIO },
+    { ...MARCADOR_SET_VACIO },
+    { ...MARCADOR_SET_VACIO },
+  ];
+}
 
 interface UseRegistroResultadoProps {
   partidos: Partido[];
@@ -31,8 +38,15 @@ interface UseRegistroResultadoProps {
 interface UseRegistroResultadoReturn {
   partidoSeleccionadoId: string;
   tipoResultado: TipoResultado;
-  cantidadSets: 2 | 3;
-  marcadores: MarcadorSet[];
+  /** Formato del partido seleccionado: "un_set" o "mejor_de_3". */
+  formato: FormatoPartido;
+  /** Cuántos sets hay que mostrar; sale del marcador, no se elige. */
+  setsVisibles: 1 | 2 | 3;
+  marcadores: MarcadorSetTexto[];
+  tipoTercerSet: TipoTercerSet;
+  /** Ganador y errores del marcador mientras se escribe (null si no es un partido normal). */
+  vistaPrevia: VistaPreviaMarcador | null;
+  hayMarcadorCargado: boolean;
   ganadorEspecialId: string;
   resultadoOficial: boolean;
   guardandoResultado: boolean;
@@ -40,8 +54,8 @@ interface UseRegistroResultadoReturn {
   errorResultado: string | null;
   setPartidoSeleccionadoId: (id: string) => void;
   setTipoResultado: (tipo: TipoResultado) => void;
-  setCantidadSets: (cantidad: 2 | 3) => void;
-  setMarcadores: React.Dispatch<React.SetStateAction<MarcadorSet[]>>;
+  setTipoTercerSet: (tipo: TipoTercerSet) => void;
+  setMarcadores: Dispatch<SetStateAction<MarcadorSetTexto[]>>;
   setGanadorEspecialId: (id: string) => void;
   setResultadoOficial: (oficial: boolean) => void;
   setErrorResultado: (mensaje: string | null) => void;
@@ -54,14 +68,10 @@ export function useRegistroResultado({
   competencia,
   onExito,
 }: UseRegistroResultadoProps): UseRegistroResultadoReturn {
-  const [partidoSeleccionadoId, setPartidoSeleccionadoId] = useState("");
+  const [partidoSeleccionadoId, setPartidoId] = useState("");
   const [tipoResultado, setTipoResultado] = useState<TipoResultado>("normal");
-  const [cantidadSets, setCantidadSets] = useState<2 | 3>(2);
-  const [marcadores, setMarcadores] = useState<MarcadorSet[]>([
-    { ...MARCADOR_VACIO },
-    { ...MARCADOR_VACIO },
-    { ...MARCADOR_VACIO },
-  ]);
+  const [marcadores, setMarcadores] = useState<MarcadorSetTexto[]>(marcadoresVacios);
+  const [tipoTercerSet, setTipoTercerSet] = useState<TipoTercerSet>("set");
   const [ganadorEspecialId, setGanadorEspecialId] = useState("");
   const [resultadoOficial, setResultadoOficial] = useState(true);
 
@@ -69,13 +79,52 @@ export function useRegistroResultado({
   const [mensajeResultado, setMensajeResultado] = useState<string | null>(null);
   const [errorResultado, setErrorResultado] = useState<string | null>(null);
 
+  const partidoSeleccionado = partidos.find((item) => item.id === partidoSeleccionadoId);
+  const formato: FormatoPartido =
+    partidoSeleccionado && competencia
+      ? formatoDelPartido(partidoSeleccionado, competencia)
+      : "mejor_de_3";
+
+  const setsVisibles = cantidadSetsVisibles(marcadores, formato);
+
+  const hayMarcadorCargado = marcadores.some((marcador) =>
+    Object.values(marcador).some((valor) => valor !== ""),
+  );
+
+  const vistaPrevia = useMemo<VistaPreviaMarcador | null>(() => {
+    if (tipoResultado !== "normal") return null;
+    const construccion = construirMarcador(marcadores, formato, tipoTercerSet);
+    return construccion.ok
+      ? { ok: true, ganador: construccion.ganador }
+      : { ok: false, error: construccion.error };
+  }, [tipoResultado, marcadores, formato, tipoTercerSet]);
+
+  function reiniciarCarga() {
+    setTipoResultado("normal");
+    setMarcadores(marcadoresVacios());
+    setTipoTercerSet("set");
+    setGanadorEspecialId("");
+  }
+
+  /** Al cambiar de partido se limpia lo escrito: el formato puede ser otro. */
+  function seleccionarPartido(id: string) {
+    if (id === partidoSeleccionadoId) return;
+    setPartidoId(id);
+    reiniciarCarga();
+    setErrorResultado(null);
+    setMensajeResultado(null);
+  }
+
   async function guardarResultado() {
     if (!competencia) return;
 
-    const partido = partidos.find((item) => item.id === partidoSeleccionadoId);
-
-    if (!partido) {
+    if (!partidoSeleccionado) {
       setErrorResultado("Seleccioná un partido válido.");
+      return;
+    }
+
+    if (!partidoSeleccionado.pareja1Id || !partidoSeleccionado.pareja2Id) {
+      setErrorResultado("Este partido todavía no tiene las dos parejas definidas.");
       return;
     }
 
@@ -88,80 +137,24 @@ export function useRegistroResultado({
       let ganadorParejaId: string | undefined;
 
       if (tipoResultado === "normal") {
-        sets = marcadores.slice(0, cantidadSets).map((marcador, indice) => {
-          const tieBreakActivo =
-            marcador.juegosPareja1 === "6" && marcador.juegosPareja2 === "6";
-
-          const tieBreakCompleto =
-            marcador.tieBreakPareja1 !== "" && marcador.tieBreakPareja2 !== "";
-
-          if (tieBreakActivo && !tieBreakCompleto) {
-            throw new Error(
-              `Completá los puntos del tie-break del set ${indice + 1}.`,
-            );
-          }
-
-          const puntosTieBreakPareja1 = Number(marcador.tieBreakPareja1);
-          const puntosTieBreakPareja2 = Number(marcador.tieBreakPareja2);
-
-          const tieBreakValido =
-            tieBreakCompleto &&
-            puntosTieBreakPareja1 !== puntosTieBreakPareja2 &&
-            Math.max(puntosTieBreakPareja1, puntosTieBreakPareja2) >= 7 &&
-            Math.abs(puntosTieBreakPareja1 - puntosTieBreakPareja2) >= 2;
-
-          if (tieBreakActivo && !tieBreakValido) {
-            throw new Error(
-              `El tie-break del set ${indice + 1} debe ganarse por al menos dos puntos.`,
-            );
-          }
-
-          const juegosPareja1 = tieBreakActivo
-            ? puntosTieBreakPareja1 > puntosTieBreakPareja2
-              ? 7
-              : 6
-            : Number(marcador.juegosPareja1);
-
-          const juegosPareja2 = tieBreakActivo
-            ? puntosTieBreakPareja2 > puntosTieBreakPareja1
-              ? 7
-              : 6
-            : Number(marcador.juegosPareja2);
-
-          const set: SetResultado = {
-            setNumero: indice + 1,
-            juegosPareja1,
-            juegosPareja2,
-          };
-
-          if (tieBreakActivo) {
-            set.tieBreakPareja1 = puntosTieBreakPareja1;
-            set.tieBreakPareja2 = puntosTieBreakPareja2;
-          }
-
-          return set;
-        });
-
-        const setsGanadosPareja1 = sets.filter(
-          (set) => set.juegosPareja1 > set.juegosPareja2,
-        ).length;
-
-        if (!partido.pareja1Id || !partido.pareja2Id) {
-          throw new Error("El partido tiene parejas sin definir.");
+        const construccion = construirMarcador(marcadores, formato, tipoTercerSet);
+        if (!construccion.ok) {
+          throw new Error(construccion.error);
         }
-
+        sets = construccion.sets;
         ganadorParejaId =
-          setsGanadosPareja1 >= 2 ? partido.pareja1Id : partido.pareja2Id;
+          construccion.ganador === 1
+            ? partidoSeleccionado.pareja1Id
+            : partidoSeleccionado.pareja2Id;
       } else if (tipoResultado === "walkover" || tipoResultado === "abandono") {
         if (!ganadorEspecialId) {
           throw new Error("Seleccioná la pareja ganadora.");
         }
-
         ganadorParejaId = ganadorEspecialId;
       }
 
       const datosResultado: Omit<Resultado, "id"> = {
-        partidoId: partido.id,
+        partidoId: partidoSeleccionado.id,
         tipo: tipoResultado,
         sets,
         ganadorParejaId,
@@ -169,11 +162,11 @@ export function useRegistroResultado({
         fechaRegistro: new Date(),
       };
 
-      if (partido.estado === "suspendido") {
+      if (partidoSeleccionado.estado === "suspendido") {
         await resolverSuspension(datosResultado);
       } else {
         await registrarResultado(datosResultado, {
-          partidoId: partido.id,
+          partidoId: partidoSeleccionado.id,
           torneoId: competencia.torneoId,
           competenciaId: competencia.id,
           categoriaId: competencia.categoriaId,
@@ -183,15 +176,8 @@ export function useRegistroResultado({
       // El avance del ganador, el campeón y el cierre de la competencia ya se
       // resolvieron dentro de la transacción del resultado.
       setMensajeResultado("Resultado registrado correctamente.");
-
-      setPartidoSeleccionadoId("");
-      setGanadorEspecialId("");
-      setCantidadSets(2);
-      setMarcadores([
-        { ...MARCADOR_VACIO },
-        { ...MARCADOR_VACIO },
-        { ...MARCADOR_VACIO },
-      ]);
+      setPartidoId("");
+      reiniciarCarga();
       onExito();
     } catch (err) {
       setErrorResultado(
@@ -205,16 +191,20 @@ export function useRegistroResultado({
   return {
     partidoSeleccionadoId,
     tipoResultado,
-    cantidadSets,
+    formato,
+    setsVisibles,
     marcadores,
+    tipoTercerSet,
+    vistaPrevia,
+    hayMarcadorCargado,
     ganadorEspecialId,
     resultadoOficial,
     guardandoResultado,
     mensajeResultado,
     errorResultado,
-    setPartidoSeleccionadoId,
+    setPartidoSeleccionadoId: seleccionarPartido,
     setTipoResultado,
-    setCantidadSets,
+    setTipoTercerSet,
     setMarcadores,
     setGanadorEspecialId,
     setResultadoOficial,

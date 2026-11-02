@@ -241,25 +241,79 @@ function contarCrucesMismaZona(siembra: string[], zonaPorPareja: Map<string, str
   return cruces;
 }
 
+/** Semilla numérica estable a partir de un texto (FNV-1a). Misma entrada, misma semilla. */
+export function semillaDesdeTexto(texto: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < texto.length; i++) {
+    hash ^= texto.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+/** Nombre legible de una fase de la llave ("cuartos_final" -> "Cuartos de final"). */
+export function etiquetaFase(fase: string): string {
+  switch (fase) {
+    case "final":
+      return "Final";
+    case "semifinal":
+      return "Semifinal";
+    case "cuartos_final":
+      return "Cuartos de final";
+    case "octavos_final":
+      return "Octavos de final";
+    case "dieciseisavos_final":
+      return "16avos de final";
+    case "tercer_puesto":
+      return "Tercer puesto";
+    default: {
+      const coincidencia = /^ronda_de_(\d+)$/.exec(fase);
+      return coincidencia ? `Ronda de ${coincidencia[1]}` : fase.replaceAll("_", " ");
+    }
+  }
+}
+
 /**
- * Siembra para el playoff a partir de los clasificados de las zonas.
- * Orden: posición en la zona, luego victorias, diferencia de sets y de games.
- * Después intercambia parejas de la misma posición para evitar que dos de la
- * misma zona se crucen en la primera ronda (mejor esfuerzo, determinista).
+ * CRITERIO OFICIAL DE CRUCES DEL PLAYOFF (zonas + eliminación directa)
+ *
+ * 1. Clasifican las primeras `parejasClasificanPorZona` parejas de cada zona.
+ * 2. Siembra: primero todos los primeros de zona, luego los segundos, y así.
+ * 3. Dentro de cada posición se ordena por rendimiento PROMEDIO por partido
+ *    jugado: porcentaje de victorias, diferencia de sets y diferencia de games.
+ *    Así zonas de distinto tamaño (3 y 4 parejas) son comparables.
+ * 4. Si siguen empatadas, desempata un sorteo reproducible (semilla guardada).
+ * 5. Cuadro estándar: 1° vs último, 2° vs penúltimo, etc. Los mejores
+ *    sembrados solo pueden cruzarse en las rondas finales.
+ * 6. Si las parejas no completan el cuadro, los byes (pasan directo a la
+ *    segunda ronda) son para los mejores sembrados.
+ * 7. Se evita que dos parejas de la misma zona se enfrenten en la primera
+ *    ronda, intercambiando solo parejas de la misma posición (nunca se sube
+ *    ni se baja a una pareja de nivel).
  */
-export function sembrarDesdeZonas(clasificados: ClasificadoZona[]): string[] {
+export function sembrarDesdeZonas(clasificados: ClasificadoZona[], semilla = 0): string[] {
   if (new Set(clasificados.map((c) => c.parejaId)).size !== clasificados.length) {
     throw new Error("Hay parejas repetidas entre los clasificados.");
   }
 
+  const promedio = (c: ClasificadoZona, valor: number | undefined): number => {
+    const jugados = c.partidosJugados ?? 0;
+    return jugados > 0 ? (valor ?? 0) / jugados : (valor ?? 0);
+  };
+
+  // El sorteo de desempate no depende del orden en que lleguen los datos.
+  const azar = mulberry32(semilla);
+  const sorteo = new Map<string, number>();
+  [...clasificados]
+    .sort((a, b) => a.parejaId.localeCompare(b.parejaId))
+    .forEach((c) => sorteo.set(c.parejaId, azar()));
+
   const ordenados = [...clasificados].sort(
     (a, b) =>
       a.posicion - b.posicion ||
-      (b.victorias ?? 0) - (a.victorias ?? 0) ||
-      (b.diferenciaSets ?? 0) - (a.diferenciaSets ?? 0) ||
-      (b.diferenciaGames ?? 0) - (a.diferenciaGames ?? 0) ||
-      a.zonaId.localeCompare(b.zonaId) ||
-      a.parejaId.localeCompare(b.parejaId),
+      promedio(b, b.victorias) - promedio(a, a.victorias) ||
+      promedio(b, b.diferenciaSets) - promedio(a, a.diferenciaSets) ||
+      promedio(b, b.diferenciaGames) - promedio(a, a.diferenciaGames) ||
+      sorteo.get(a.parejaId)! - sorteo.get(b.parejaId)!,
   );
 
   const siembra = ordenados.map((c) => c.parejaId);

@@ -130,7 +130,8 @@ test("3 zonas de 3, clasifican 2: 6 parejas, cuadro de 8 con 2 byes", () => {
   assert.equal(plan.cuadro.tamano, 8);
   assert.equal(plan.cuadro.byes, 2);
   assert.equal(plan.cuadro.partidos.length, 7);
-  assert.deepEqual(plan.siembra.slice(0, 3), ["A1", "B1", "C1"]);
+  // Los tres primeros de zona van primero (el orden entre ellos lo define el sorteo).
+  assert.deepEqual([...plan.siembra.slice(0, 3)].sort(), ["A1", "B1", "C1"]);
 });
 
 test("zona con partidos sin resultado oficial bloquea el playoff", () => {
@@ -253,12 +254,21 @@ test("tabla: el súper tie-break cuenta como set ganado pero no suma games", () 
   assert.equal(tabla.completa, true);
 });
 
-test("tabla: zona a un set acepta un único set y mejor de 3 por defecto lo rechaza", () => {
+test("tabla: con formato explícito es estricto; sin formato acepta ambos (compatibilidad)", () => {
   const sets = [set(1, 6, 2)];
   const tabla = calcularTablaZona(zonaDos, [partidoDos(sets)], [resultadoDos(sets)], criterios, "un_set");
   assert.equal(tabla.filas.find((f) => f.parejaId === "A1")!.victorias, 1);
   assert.throws(
-    () => calcularTablaZona(zonaDos, [partidoDos(sets)], [resultadoDos(sets)], criterios),
+    () => calcularTablaZona(zonaDos, [partidoDos(sets)], [resultadoDos(sets)], criterios, "mejor_de_3"),
+    /no cumple las reglas deportivas/,
+  );
+  // Sin formato (llamadores que todavía no lo pasan): un set válido se acepta.
+  const sinFormato = calcularTablaZona(zonaDos, [partidoDos(sets)], [resultadoDos(sets)], criterios);
+  assert.equal(sinFormato.filas.find((f) => f.parejaId === "A1")!.victorias, 1);
+  // ...pero un marcador inválido en ambos formatos sigue rechazándose.
+  const invalido = [set(1, 6, 5)];
+  assert.throws(
+    () => calcularTablaZona(zonaDos, [partidoDos(invalido)], [resultadoDos(invalido)], criterios),
     /no cumple las reglas deportivas/,
   );
 });

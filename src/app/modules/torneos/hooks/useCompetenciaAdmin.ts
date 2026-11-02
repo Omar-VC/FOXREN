@@ -39,6 +39,8 @@ interface UseCompetenciaAdminReturn {
   copiarInforme: () => Promise<void>;
   actualizarPartidos: () => void;
   actualizarParejas: () => void;
+  /** Vuelve a leer la competencia (estado, campeón, llave generada...). */
+  recargarCompetencia: () => void;
   setCompetencia: (updater: (actual: Competencia | null) => Competencia | null) => void;
   nombreJugador: (jugadorId: string) => string;
   nombrePareja: (parejaId: string) => string;
@@ -66,6 +68,7 @@ export function useCompetenciaAdmin(competenciaId: string): UseCompetenciaAdminR
   const [informeCopiado, setInformeCopiado] = useState(false);
   const [actualizacionParejas, setActualizacionParejas] = useState(0);
   const [actualizacionPartidos, setActualizacionPartidos] = useState(0);
+  const [actualizacionCompetencia, setActualizacionCompetencia] = useState(0);
 
   /* ---------- Carga de competencia ---------- */
   useEffect(() => {
@@ -88,7 +91,7 @@ export function useCompetenciaAdmin(competenciaId: string): UseCompetenciaAdminR
     }
 
     cargarCompetencia();
-  }, [competenciaId]);
+  }, [competenciaId, actualizacionCompetencia]);
 
   /* ---------- Carga de partidos, parejas, zonas, resultados ---------- */
   useEffect(() => {
@@ -167,8 +170,12 @@ export function useCompetenciaAdmin(competenciaId: string): UseCompetenciaAdminR
         ...competencia,
         estado: "inscripciones_abiertas",
       });
-    } catch {
-      setError("No se pudieron abrir las inscripciones.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudieron abrir las inscripciones.",
+      );
     } finally {
       setCambiandoEstado(false);
     }
@@ -334,6 +341,7 @@ export function useCompetenciaAdmin(competenciaId: string): UseCompetenciaAdminR
     copiarInforme,
     actualizarPartidos: useCallback(() => setActualizacionPartidos((a) => a + 1), []),
     actualizarParejas: useCallback(() => setActualizacionParejas((a) => a + 1), []),
+    recargarCompetencia: useCallback(() => setActualizacionCompetencia((a) => a + 1), []),
     setCompetencia,
     nombreJugador,
     nombrePareja,

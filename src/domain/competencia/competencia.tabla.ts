@@ -1,9 +1,9 @@
 import type { Resultado } from "../resultado/resultado.types";
-import { validarTipoResultado } from "../resultado/resultado.rules";
+import { validarTipoResultado } from "../resultado/resultado.rules.ts";
 import type { FormatoPartido, Partido } from "../partido/partido.types";
 import type { Zona } from "./competencia.zonas.types";
 import type { CriterioDesempateZona } from "./competencia.types";
-import { CRITERIOS_DESEMPATE_BASE } from "./competencia.reglamento.rules";
+import { CRITERIOS_DESEMPATE_BASE } from "./competencia.reglamento.rules.ts";
 
 export interface FilaTablaZona {
   parejaId: string;
@@ -60,15 +60,16 @@ export function calcularTablaZona(
   partidos: Partido[],
   resultados: Resultado[],
   criteriosDesempate: CriterioDesempateZona[] = CRITERIOS_DESEMPATE_BASE,
-  formatoPartido: FormatoPartido,
+  /**
+   * Formato de partido de la fase de zonas. Si no se indica, se acepta un resultado
+   * válido en cualquiera de los dos formatos (ya se validó de forma estricta al
+   * registrarlo). Los llamadores nuevos deberían indicarlo.
+   */
+  formatoPartido?: FormatoPartido,
 ): TablaZona {
   if (!criteriosValidos(criteriosDesempate)) {
     throw new Error("La configuración de criterios de desempate no es válida.");
   }
-  if (!formatoPartido) {
-    throw new Error("Se requiere especificar un formato de partido válido para calcular la tabla.");
-  }
-
   const parejaIds = [...new Set(zona.parejaIds)];
   if (parejaIds.length !== zona.parejaIds.length || parejaIds.length < 2) {
     throw new Error("La zona contiene parejas duplicadas o insuficientes.");
@@ -104,6 +105,7 @@ export function calcularTablaZona(
   let partidosPendientes = 0;
 
   for (const partido of partidosZona) {
+    // 🛡️ Agregar esta guarda para ignorar partidos de playoff sin parejas definidas
     if (!partido.pareja1Id || !partido.pareja2Id) {
       continue;
     }
@@ -123,7 +125,11 @@ export function calcularTablaZona(
       partidosPendientes++;
       continue;
     }
-    if (!validarTipoResultado(resultado, formatoPartido)) {
+    const cumpleReglas = formatoPartido
+      ? validarTipoResultado(resultado, formatoPartido)
+      : validarTipoResultado(resultado, "mejor_de_3") ||
+        validarTipoResultado(resultado, "un_set");
+    if (!cumpleReglas) {
       throw new Error("Un resultado no cumple las reglas deportivas del partido.");
     }
     const estadoEsperado = resultado.tipo === "normal"
@@ -167,6 +173,7 @@ export function calcularTablaZona(
       fila1.setsPerdidos += setsPareja2;
       fila2.setsGanados += setsPareja2;
       fila2.setsPerdidos += setsPareja1;
+      // El súper tie-break cuenta como set ganado (1-0) pero no suma games.
       if (set.tipo === "super_tiebreak") continue;
       fila1.gamesGanados += set.juegosPareja1;
       fila1.gamesPerdidos += set.juegosPareja2;

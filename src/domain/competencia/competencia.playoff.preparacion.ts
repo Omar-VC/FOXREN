@@ -100,6 +100,7 @@ export function planificarPlayoff(entrada: EntradaPlanPlayoff): PlanPlayoff {
           parejaId,
           zonaId: zona.id,
           posicion: fila.posicion,
+          partidosJugados: fila.partidosJugados,
           victorias: fila.victorias,
           diferenciaSets: fila.diferenciaSets,
           diferenciaGames: fila.diferenciaGames,
@@ -117,6 +118,6 @@ export function planificarPlayoff(entrada: EntradaPlanPlayoff): PlanPlayoff {
     return bloqueado("Se necesitan al menos dos parejas clasificadas para armar el playoff.");
   }
 
-  const siembra = sembrarDesdeZonas(clasificados);
+  const siembra = sembrarDesdeZonas(clasificados, entrada.semilla);
   return { ok: true, siembra, cuadro: generarCuadro(entrada.competenciaId, siembra) };
 }

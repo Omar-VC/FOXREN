@@ -37,6 +37,8 @@ export interface ClasificadoZona {
   zonaId: string;
   /** 1 = primera de su zona. */
   posicion: number;
+  /** Partidos jugados en la zona: permite comparar zonas de distinto tamaño por promedio. */
+  partidosJugados?: number;
   victorias?: number;
   diferenciaSets?: number;
   diferenciaGames?: number;
