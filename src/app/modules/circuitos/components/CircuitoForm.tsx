@@ -45,47 +45,73 @@ export default function CircuitoForm({
   }
 
   return (
-    <form className="fox-form" onSubmit={handleSubmit}>
-      <div>
-        <label>Nombre</label>
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="border-b border-[var(--color-border)] pb-3">
+        <h3 className="text-base font-bold text-white tracking-wide">
+          Registrar Circuito
+        </h3>
+        <p className="text-xs text-slate-400 mt-0.5">
+          Creá un nuevo circuito oficial para la temporada
+        </p>
+      </div>
 
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+          Nombre
+        </label>
         <input
           value={nombre}
           onChange={(event) =>
             setNombre(event.target.value)
           }
           placeholder="Ej: Circuito Neuquén"
+          className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-main)] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--color-accent)] transition-colors shadow-sm"
         />
       </div>
 
-      <div>
-        <label>Descripción</label>
-
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+          Descripción
+        </label>
         <textarea
           value={descripcion}
           onChange={(event) =>
             setDescripcion(event.target.value)
           }
-          placeholder="Descripción del circuito"
+          placeholder="Descripción breve del circuito..."
+          rows={3}
+          className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-main)] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--color-accent)] transition-colors shadow-sm resize-none"
         />
       </div>
 
-      <div>
-        <label>Temporada</label>
-
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+          Temporada
+        </label>
         <input
           value={temporada}
           onChange={(event) =>
             setTemporada(event.target.value)
           }
           placeholder="Ej: 2026"
+          className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-main)] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--color-accent)] transition-colors shadow-sm"
         />
       </div>
 
-      <OrganizadorSelector value={organizadorIds} onChange={setOrganizadorIds} label="Organizadores del circuito" />
+      <div className="pt-1">
+        <OrganizadorSelector 
+          value={organizadorIds} 
+          onChange={setOrganizadorIds} 
+          label="Organizadores del circuito" 
+        />
+      </div>
 
-      <button type="submit" disabled={creando}>
-        {creando ? "Creando..." : "Crear circuito"}
+      <button 
+        type="submit" 
+        disabled={creando}
+        className="w-full mt-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/80 px-4 py-3 text-xs font-bold text-white uppercase tracking-wider transition-colors disabled:opacity-50 shadow-md shadow-purple-950/20"
+      >
+        {creando ? "Creando circuito..." : "Crear circuito"}
       </button>
     </form>
   );
