@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 import type { Competencia } from "../../../../domain/competencia/competencia.types";
 import type { FormatoPartido } from "../../../../domain/partido/partido.types";
 import { actualizarCompetencia } from "../../../../infrastructure/repositories/competenciasRepository";
@@ -9,10 +8,8 @@ interface Props {
   onGuardado: () => void;
 }
 
-const CAJA =
-  "bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg";
 const SELECT =
-  "w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white disabled:opacity-50";
+  "w-full rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs text-white focus:border-[var(--color-accent)] focus:outline-none transition-colors disabled:opacity-40";
 
 export default function FormatoPartidosAdmin({ competencia, onGuardado }: Props) {
   const conZonas = competencia.formato !== "eliminacion_directa";
@@ -47,13 +44,13 @@ export default function FormatoPartidosAdmin({ competencia, onGuardado }: Props)
         setError("La cantidad de parejas que clasifican debe ser un entero mayor o igual a 1.");
         return;
       }
-      cambios.parejasClasificanPorZona = n;
+      changesAddOrUpdate: cambios.parejasClasificanPorZona = n;
     }
 
     try {
       setGuardando(true);
       await actualizarCompetencia(competencia.id, cambios);
-      setMensaje("Guardado.");
+      setMensaje("Guardado correctamente.");
       onGuardado();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar.");
@@ -63,16 +60,20 @@ export default function FormatoPartidosAdmin({ competencia, onGuardado }: Props)
   }
 
   return (
-    <div className={CAJA}>
-      <h3 className="text-lg font-semibold text-slate-100 mb-1">Formato de partidos</h3>
-      <p className="text-sm text-slate-400 mb-4">
-        Un set (a 6 games) o mejor de 3 sets. Se puede cambiar hasta generar cada fase.
-      </p>
+    <div className="bg-black/20 border border-white/5 rounded-2xl p-6 space-y-5">
+      {/* Cabecera */}
+      <div className="space-y-1">
+        <h3 className="text-sm font-bold text-white m-0">Formato de partidos</h3>
+        <p className="text-xs text-[var(--color-text-muted)] m-0">
+          Define si se juega a un set (a 6 games) o al mejor de 3. Modificable antes de generar cada fase.
+        </p>
+      </div>
 
+      {/* Controles en grilla limpia */}
       <div className="grid gap-4 md:grid-cols-3">
         {conZonas && (
-          <label className="text-sm text-slate-300">
-            Zonas
+          <label className="space-y-1.5 block text-xs text-[var(--color-text-muted)] font-medium">
+            <span>Zonas</span>
             <select
               className={SELECT}
               value={formatoZona}
@@ -85,8 +86,8 @@ export default function FormatoPartidosAdmin({ competencia, onGuardado }: Props)
           </label>
         )}
 
-        <label className="text-sm text-slate-300">
-          Playoff
+        <label className="space-y-1.5 block text-xs text-[var(--color-text-muted)] font-medium">
+          <span>Playoff</span>
           <select
             className={SELECT}
             value={formatoPlayoff}
@@ -99,8 +100,8 @@ export default function FormatoPartidosAdmin({ competencia, onGuardado }: Props)
         </label>
 
         {conZonas && (
-          <label className="text-sm text-slate-300">
-            Parejas que clasifican por zona
+          <label className="space-y-1.5 block text-xs text-[var(--color-text-muted)] font-medium">
+            <span>Parejas que clasifican por zona</span>
             <input
               type="number"
               min="1"
@@ -113,17 +114,29 @@ export default function FormatoPartidosAdmin({ competencia, onGuardado }: Props)
         )}
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
-      {mensaje && <p className="mt-3 text-sm text-emerald-300">{mensaje}</p>}
+      {/* Alertas de error o éxito */}
+      {error && (
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
+          ⚠️ {error}
+        </div>
+      )}
+      {mensaje && (
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+          ✓ {mensaje}
+        </div>
+      )}
 
-      <button
-        type="button"
-        onClick={() => void guardar()}
-        disabled={guardando}
-        className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-      >
-        {guardando ? "Guardando..." : "Guardar formato"}
-      </button>
+      {/* Botón de acción alineado */}
+      <div className="flex justify-end pt-2 border-t border-white/5">
+        <button
+          type="button"
+          onClick={() => void guardar()}
+          disabled={guardando}
+          className="fox-button-primary text-xs py-2 px-4 font-semibold transition-all"
+        >
+          {guardando ? "Guardando..." : "Guardar formato"}
+        </button>
+      </div>
     </div>
   );
 }

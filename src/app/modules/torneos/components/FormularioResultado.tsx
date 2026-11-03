@@ -1,5 +1,4 @@
 import type { Dispatch, SetStateAction } from "react";
-
 import type { FormatoPartido, Partido } from "../../../../domain/partido/partido.types";
 import type { TipoResultado } from "../../../../domain/resultado/resultado.types";
 import { partidoListoParaJugar } from "../../../../domain/competencia/competencia.playoff.rules";
@@ -45,9 +44,9 @@ interface Props {
 const ESTADOS_CERRADOS: Partido["estado"][] = ["finalizado", "walkover", "abandono"];
 
 const CLASE_INPUT =
-  "mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-white";
+  "mt-1 w-full rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs text-white focus:border-[var(--color-accent)] focus:outline-none transition-colors";
 const CLASE_SELECT =
-  "w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white";
+  "w-full rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs text-white focus:border-[var(--color-accent)] focus:outline-none transition-colors";
 
 export default function FormularioResultado({
   partidos,
@@ -79,8 +78,6 @@ export default function FormularioResultado({
   const partido = partidos.find((item) => item.id === partidoSeleccionadoId);
   const esSuspendido = partido?.estado === "suspendido";
 
-  // Solo se ofrecen partidos que se pueden jugar: con las dos parejas definidas,
-  // que no sean un bye y que no estén cerrados.
   const partidosJugables = partidos.filter(
     (item) =>
       partidoListoParaJugar({
@@ -104,20 +101,27 @@ export default function FormularioResultado({
   }
 
   return (
-    <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
-      <h4 className="text-lg font-semibold text-slate-100 mb-4">
-        Registrar resultado
-      </h4>
+    <div className="bg-black/20 border border-white/5 rounded-2xl p-6 space-y-6">
+      {/* Cabecera */}
+      <div className="space-y-1">
+        <h3 className="text-sm font-bold text-white m-0">Registrar resultado</h3>
+        <p className="text-xs text-[var(--color-text-muted)] m-0">
+          Selecciona un partido habilitado para cargar el marcador o definir incidencias.
+        </p>
+      </div>
 
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-slate-300 mb-1">Partido</label>
+        {/* Selección de partido */}
+        <div className="space-y-1.5">
+          <label className="block text-xs text-[var(--color-text-muted)] font-medium">
+            Partido
+          </label>
           <select
             value={partidoSeleccionadoId}
             onChange={(e) => setPartidoSeleccionadoId(e.target.value)}
             className={CLASE_SELECT}
           >
-            <option value="">Seleccionar partido</option>
+            <option value="">Seleccionar partido...</option>
             {partidosJugables.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.estado === "suspendido" ? "Resolver suspensión: " : ""}
@@ -127,26 +131,29 @@ export default function FormularioResultado({
             ))}
           </select>
           {partidosJugables.length === 0 && (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="text-[11px] text-[var(--color-text-muted)] m-0">
               No hay partidos listos para cargar resultado.
             </p>
           )}
         </div>
 
         {partido && (
-          <p className="text-xs text-slate-400">
+          <div className="text-xs text-[var(--color-text-muted)] bg-white/5 border border-white/5 p-3 rounded-xl">
             Formato:{" "}
-            <span className="font-semibold text-slate-200">
+            <span className="font-semibold text-white">
               {formato === "un_set" ? "Un set" : "Mejor de 3"}
             </span>{" "}
-            {formato === "un_set"
-              ? "(a 6 games; en 6-6, tie-break a 7 puntos)"
-              : "(gana quien gane 2 sets; con 1-1, tercer set o súper tie-break a 10)"}
-          </p>
+            <span className="opacity-80">
+              {formato === "un_set"
+                ? "(a 6 games; tie-break en 6-6)"
+                : "(gana quien gane 2 sets)"}
+            </span>
+          </div>
         )}
 
-        <div>
-          <label className="block text-sm text-slate-300 mb-1">
+        {/* Tipo de resultado */}
+        <div className="space-y-1.5">
+          <label className="block text-xs text-[var(--color-text-muted)] font-medium">
             Tipo de resultado
           </label>
           <select
@@ -164,8 +171,9 @@ export default function FormularioResultado({
           </select>
         </div>
 
+        {/* Sets (modo normal) */}
         {tipoResultado === "normal" && partido && (
-          <>
+          <div className="space-y-4 pt-2">
             {Array.from({ length: setsVisibles }, (_, indice) => {
               const marcador = marcadores[indice] ?? MARCADOR_SET_VACIO;
               const esTercero = indice === 2;
@@ -174,16 +182,18 @@ export default function FormularioResultado({
               return (
                 <div
                   key={indice}
-                  className="rounded-lg border border-slate-700 p-3 space-y-3"
+                  className="rounded-xl border border-white/5 bg-black/30 p-4 space-y-3"
                 >
-                  <p className="text-sm font-semibold text-slate-200">
-                    {esSuper ? "Súper tie-break (a 10 puntos)" : `Set ${indice + 1}`}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                      {esSuper ? "Súper tie-break (a 10 puntos)" : `Set ${indice + 1}`}
+                    </span>
+                  </div>
 
                   {esTercero && (
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">
-                        Cómo se define el tercer set
+                    <div className="space-y-1">
+                      <label className="block text-[11px] text-[var(--color-text-muted)]">
+                        Definición del tercer set
                       </label>
                       <select
                         value={tipoTercerSet}
@@ -198,7 +208,7 @@ export default function FormularioResultado({
 
                   {esSuper ? (
                     <div className="grid grid-cols-2 gap-3">
-                      <label className="text-xs text-slate-400">
+                      <label className="text-xs text-[var(--color-text-muted)]">
                         Puntos de {nombre1}
                         <input
                           type="number"
@@ -209,7 +219,7 @@ export default function FormularioResultado({
                           className={CLASE_INPUT}
                         />
                       </label>
-                      <label className="text-xs text-slate-400">
+                      <label className="text-xs text-[var(--color-text-muted)]">
                         Puntos de {nombre2}
                         <input
                           type="number"
@@ -224,8 +234,8 @@ export default function FormularioResultado({
                   ) : (
                     <>
                       <div className="grid grid-cols-2 gap-3">
-                        <label className="text-xs text-slate-400">
-                          {nombre1}
+                        <label className="text-xs text-[var(--color-text-muted)]">
+                          Juegos de {nombre1}
                           <input
                             type="number"
                             min="0"
@@ -236,8 +246,8 @@ export default function FormularioResultado({
                             className={CLASE_INPUT}
                           />
                         </label>
-                        <label className="text-xs text-slate-400">
-                          {nombre2}
+                        <label className="text-xs text-[var(--color-text-muted)]">
+                          Juegos de {nombre2}
                           <input
                             type="number"
                             min="0"
@@ -251,12 +261,12 @@ export default function FormularioResultado({
                       </div>
 
                       {requiereTieBreak(marcador) && (
-                        <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                          <p className="text-sm font-medium text-amber-300">
+                        <div className="space-y-3 rounded-xl border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/5 p-3">
+                          <p className="text-xs font-semibold text-[var(--color-accent)] m-0">
                             Tie-break (a 7 puntos, diferencia de 2)
                           </p>
                           <div className="grid grid-cols-2 gap-3">
-                            <label className="text-xs text-slate-400">
+                            <label className="text-xs text-[var(--color-text-muted)]">
                               Puntos de {nombre1}
                               <input
                                 type="number"
@@ -267,7 +277,7 @@ export default function FormularioResultado({
                                 className={CLASE_INPUT}
                               />
                             </label>
-                            <label className="text-xs text-slate-400">
+                            <label className="text-xs text-[var(--color-text-muted)]">
                               Puntos de {nombre2}
                               <input
                                 type="number"
@@ -280,8 +290,8 @@ export default function FormularioResultado({
                             </label>
                           </div>
                           {marcador.juegosPareja1 === "6" && marcador.juegosPareja2 === "6" && (
-                            <p className="text-xs text-slate-400">
-                              El set se completa solo como 7-6 para quien gane el tie-break.
+                            <p className="text-[11px] text-[var(--color-text-muted)] m-0">
+                              El set se completa como 7-6 automáticamente para el ganador del tie-break.
                             </p>
                           )}
                         </div>
@@ -293,19 +303,20 @@ export default function FormularioResultado({
             })}
 
             {vistaPrevia?.ok && (
-              <p className="text-sm font-semibold text-emerald-300">
-                Ganador: {vistaPrevia.ganador === 1 ? nombre1 : nombre2}
-              </p>
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                ✓ Ganador proyectado: {vistaPrevia.ganador === 1 ? nombre1 : nombre2}
+              </div>
             )}
             {vistaPrevia && !vistaPrevia.ok && hayMarcadorCargado && (
-              <p className="text-xs text-slate-400">{vistaPrevia.error}</p>
+              <p className="text-xs text-amber-300/80 m-0">{vistaPrevia.error}</p>
             )}
-          </>
+          </div>
         )}
 
+        {/* Walkover o Abandono */}
         {(tipoResultado === "walkover" || tipoResultado === "abandono") && partido && (
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">
+          <div className="space-y-1.5">
+            <label className="block text-xs text-[var(--color-text-muted)] font-medium">
               Pareja ganadora
             </label>
             <select
@@ -313,7 +324,7 @@ export default function FormularioResultado({
               onChange={(e) => setGanadorEspecialId(e.target.value)}
               className={CLASE_SELECT}
             >
-              <option value="">Seleccionar pareja</option>
+              <option value="">Seleccionar pareja...</option>
               {partido.pareja1Id && (
                 <option value={partido.pareja1Id}>{nombre1}</option>
               )}
@@ -324,35 +335,43 @@ export default function FormularioResultado({
           </div>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        {/* Checkbox de resultado oficial */}
+        <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer pt-1">
           <input
             type="checkbox"
             checked={resultadoOficial}
             onChange={(e) => setResultadoOficial(e.target.checked)}
-            className="accent-emerald-500"
+            className="rounded border-white/20 bg-black/40 text-[var(--color-accent)] focus:ring-0 w-4 h-4"
           />
-          Resultado oficial (genera historial)
+          Resultado oficial (genera historial de puntos y estadísticas)
         </label>
 
+        {/* Alertas de error o éxito */}
         {errorResultado && (
-          <p className="text-sm text-red-300">{errorResultado}</p>
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
+            ⚠️ {errorResultado}
+          </div>
         )}
-
         {mensajeResultado && (
-          <p className="text-sm text-emerald-300">{mensajeResultado}</p>
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+            ✓ {mensajeResultado}
+          </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => {
-            setMensajeResultado(null);
-            void guardarResultado();
-          }}
-          disabled={guardandoResultado || !partidoSeleccionadoId}
-          className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-        >
-          {guardandoResultado ? "Guardando..." : "Guardar resultado"}
-        </button>
+        {/* Botón de guardar */}
+        <div className="flex justify-end pt-2 border-t border-white/5">
+          <button
+            type="button"
+            onClick={() => {
+              setMensajeResultado(null);
+              void guardarResultado();
+            }}
+            disabled={guardandoResultado || !partidoSeleccionadoId}
+            className="fox-button-primary text-xs py-2.5 px-4 font-semibold transition-all w-full md:w-auto"
+          >
+            {guardandoResultado ? "Guardando..." : "Guardar resultado"}
+          </button>
+        </div>
       </div>
     </div>
   );
