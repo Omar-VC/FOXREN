@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import Logo from "../assets/logo.svg";
+import heroImage from "../assets/images/agustin-tapia.webp";
 
 // Enlaces públicos con iconos SVG profesionales
 const navLinks = [
@@ -66,12 +67,24 @@ export const Layout: React.FC = () => {
   }, [menuOpen]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-fox-bg text-slate-100 font-sans selection:bg-fox-neon selection:text-fox-bg">
+    <div className="min-h-screen flex flex-col bg-fox-bg text-slate-100 font-sans selection:bg-fox-neon selection:text-fox-bg relative overflow-x-hidden">
+      
+      {/* Fondo global de la app con la imagen corporativa nítida y un overlay oscuro elegante */}
+      {/* Fondo global de la app con la imagen mucho más nítida y visible */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <img 
+          src={heroImage} 
+          alt="Fondo FOXREN" 
+          className="w-full h-full object-cover object-center opacity-60 filter contrast-110 saturate-110"
+        />
+        {/* Un gradiente mucho más sutil para que la foto luzca clara y definida */}
+        <div className="absolute inset-0 bg-gradient-to-b from-fox-bg/80 via-fox-bg/50 to-fox-bg/85" />
+      </div>
+
       {/* Header / Navbar */}
-      <header className="sticky top-0 z-40 border-b border-fox-border/40 bg-fox-surface/80 backdrop-blur-md px-4 lg:px-8 py-3.5">
+      <header className="sticky top-0 z-40 border-b border-fox-border/40 bg-fox-surface/60 backdrop-blur-xl px-4 lg:px-8 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           
-          {/* Logo limpio sin indicador */}
           <Link to="/" className="flex items-center gap-3 group">
             <img 
               src={Logo} 
@@ -83,7 +96,6 @@ export const Layout: React.FC = () => {
             </span>
           </Link>
 
-          {/* Botón hamburguesa (mobile) */}
           <button
             className="lg:hidden p-2 rounded-xl border border-fox-border/60 bg-white/[0.03] text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -102,7 +114,6 @@ export const Layout: React.FC = () => {
             )}
           </button>
 
-          {/* Menú Desktop */}
           <nav className="hidden lg:flex items-center gap-1.5">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.to;
@@ -112,7 +123,7 @@ export const Layout: React.FC = () => {
                   <Link
                     key={link.to}
                     to={link.to}
-                    className={`ml-2 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-purple-950/20 ${
+                    className={`ml-2 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg ${
                       isActive
                         ? "bg-fox-neon text-fox-bg border border-fox-neon"
                         : "bg-gradient-to-r from-[var(--color-primary)] to-[#32113d] text-white border border-fox-neon/40 hover:border-fox-neon hover:scale-[1.02]"
@@ -155,7 +166,7 @@ export const Layout: React.FC = () => {
       {/* Drawer Menú Mobile */}
       <aside
         id="public-mobile-menu"
-        className={`fixed inset-y-0 right-0 z-50 w-80 max-w-full bg-fox-surface border-l border-fox-border/60 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed inset-y-0 right-0 z-50 w-80 max-w-full bg-fox-surface/90 backdrop-blur-xl border-l border-fox-border/60 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out lg:hidden ${
           menuOpen ? "translate-x-0" : "translate-x-full"
         }`}
         aria-hidden={!menuOpen}
@@ -208,13 +219,13 @@ export const Layout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Contenido Dinámico de las Rutas */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8">
+      {/* Contenido Dinámico de las Rutas (por encima del fondo global) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 relative z-10">
         <Outlet />
       </main>
 
       {/* Footer Pro */}
-      <footer className="border-t border-fox-border/40 bg-fox-surface/40 py-6 text-center text-xs text-slate-400">
+      <footer className="border-t border-fox-border/40 bg-fox-surface/40 backdrop-blur-md py-6 text-center text-xs text-slate-400 relative z-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© {new Date().getFullYear()} FOXREN. Plataforma de Alto Rendimiento Deportivo.</p>
           <div className="flex gap-4 text-slate-400">
