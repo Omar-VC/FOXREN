@@ -175,6 +175,12 @@ export async function cerrarPartidoConResultado(
       };
     }
 
+    // Firestore rechaza `undefined`: una suspensión no tiene ganador, así que
+    // el campo se omite en lugar de viajar vacío.
+    resultadoPersistido = Object.fromEntries(
+      Object.entries(resultadoPersistido).filter(([, valor]) => valor !== undefined),
+    ) as Omit<Resultado, "id">;
+
     /* ---------------------------- Escrituras ---------------------------- */
     const resultadoId = modo === "registrar"
       ? resultadoRepository.crearResultado(resultadoPersistido, transaction, partidoSnapshot.id)
