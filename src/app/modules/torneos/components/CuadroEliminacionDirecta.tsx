@@ -5,10 +5,11 @@ interface Props {
   partidos: Partido[];
   nombrePareja: (parejaId: string) => string;
   /** Partido elegido en el formulario de resultado (se resalta en el cuadro). */
-  partidoSeleccionadoId: string;
-  /** Elige el partido para cargarle el resultado en el formulario. */
-  onSeleccionarPartido: (partidoId: string) => void;
-  actualizarPartidos: () => void;
+  partidoSeleccionadoId?: string;
+  /** Elige el partido para cargarle el resultado en el formulario. Sin esto, el cuadro es solo lectura. */
+  onSeleccionarPartido?: (partidoId: string) => void;
+  /** Botón "Actualizar" (solo admin; la vista pública se actualiza sola). */
+  actualizarPartidos?: () => void;
 }
 
 const ESTADOS_CERRADOS: Partido["estado"][] = ["finalizado", "walkover", "abandono"];
@@ -74,13 +75,15 @@ export default function CuadroEliminacionDirecta({
     <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--border-radius)] p-5 shadow-lg">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h3 className="text-lg font-semibold text-slate-100">Cuadro de playoff</h3>
-        <button
-          type="button"
-          onClick={actualizarPartidos}
-          className="text-xs font-medium px-3 py-2 rounded-lg border border-slate-600 text-slate-200 hover:bg-slate-800"
-        >
-          Actualizar
-        </button>
+        {actualizarPartidos && (
+          <button
+            type="button"
+            onClick={actualizarPartidos}
+            className="text-xs font-medium px-3 py-2 rounded-lg border border-slate-600 text-slate-200 hover:bg-slate-800"
+          >
+            Actualizar
+          </button>
+        )}
       </div>
 
       {campeonId && (
@@ -160,10 +163,10 @@ export default function CuadroEliminacionDirecta({
                                     ? "Pendiente"
                                     : "Esperando rivales"}
                           </span>
-                          {listo && !cerrado && (
+                          {onSeleccionarPartido && listo && !cerrado && (
                             <button
                               type="button"
-                              onClick={() => onSeleccionarPartido(partido.id)}
+                              onClick={() => onSeleccionarPartido?.(partido.id)}
                               className="text-xs px-2 py-1 rounded border border-slate-600 text-slate-300 hover:text-white hover:border-slate-400"
                             >
                               {suspendido ? "Resolver suspensión" : "Cargar resultado"}

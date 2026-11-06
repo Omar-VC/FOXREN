@@ -171,12 +171,13 @@ export default function SolicitudRegistroForm() {
         </div>
 
         <fieldset>
-          <legend>Publicación opcional del perfil deportivo</legend>
+          <legend>Publicación de tu perfil deportivo</legend>
           <p>
-            Si autorizás, FOXREN podría publicar tu nombre y apellido, categoría y,
-            cuando estén disponibles, estadísticas deportivas aprobadas. Esto no
-            publicará tu DNI, fecha de nacimiento ni ubicación. La autorización
-            quedará pendiente de verificación y no publica el perfil automáticamente.
+            Si autorizás, FOXREN publicará tu nombre y apellido, categoría,
+            ciudad, provincia y edad, junto con tu ranking, historial y
+            estadísticas deportivas. Tu perfil se publica cuando FOXREN apruebe
+            tu registro. Nunca se publicará tu DNI, fecha de nacimiento,
+            teléfono ni email.
           </p>
           <label>
             <input
@@ -187,7 +188,8 @@ export default function SolicitudRegistroForm() {
                 if (!event.target.checked) setAutorizaPublicacionApodo(false);
               }}
             />
-            Autorizo la publicación de mi perfil deportivo.
+            Autorizo la publicación de mi nombre y apellido, categoría, ciudad,
+            provincia, edad y estadísticas deportivas.
           </label>
           <label>
             <input
@@ -199,10 +201,10 @@ export default function SolicitudRegistroForm() {
             También autorizo que se publique mi apodo.
           </label>
           <p>
-            Si más adelante se publica tu perfil, podés pedir el retiro al
+            Podés pedir el retiro de tu perfil en cualquier momento al
             propietario de FOXREN por un canal de contacto oficial. La identidad
-            se verificará manualmente; al procesar el retiro se quitará la
-            proyección pública y se conservará el historial oficial privado.
+            se verificará manualmente; al procesar el retiro se quitará tu perfil
+            público y se conservará el historial oficial privado.
           </p>
         </fieldset>
 

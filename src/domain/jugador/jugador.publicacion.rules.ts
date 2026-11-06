@@ -69,6 +69,35 @@ export function consentimientoPermitePublicarApodo(
     consentimiento?.autorizaApodo === true;
 }
 
+/**
+ * Aprobar la solicitud de registro es la verificación: si el jugador autorizó
+ * explícitamente desde el formulario público y quien administra aprueba la
+ * solicitud, el consentimiento queda vigente sin un segundo paso.
+ * Cualquier otro estado (sin decisión, no autorizado, revocado) se devuelve igual.
+ */
+export function consentimientoVigentePorAprobacion(
+  consentimiento: ConsentimientoPublicacion,
+  uidAprobador: string,
+  fecha: Date = new Date(),
+): ConsentimientoPublicacion {
+  if (
+    consentimiento.autorizaPerfil !== true ||
+    consentimiento.estado !== "pendiente_verificacion"
+  ) {
+    return consentimiento;
+  }
+
+  const verificado: ConsentimientoPublicacion = {
+    ...consentimiento,
+    estado: "vigente",
+    fechaVerificacion: fecha,
+    metodoVerificacion: "aprobacion_de_solicitud",
+    verificadoPorUid: uidAprobador,
+  };
+
+  return consentimientoPermitePublicar(verificado) ? verificado : consentimiento;
+}
+
 /** Construye una proyección explícita; no persiste ni acredita la identidad del remitente. */
 export function construirJugadorPublico(
   jugador: Jugador,

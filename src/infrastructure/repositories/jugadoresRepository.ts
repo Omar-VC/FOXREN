@@ -26,6 +26,7 @@ import type { SolicitudRegistro } from "../../domain/SolicitudRegistro/solicitud
 import {
   consentimientoDesdeSolicitud,
   consentimientoPermitePublicar,
+  consentimientoVigentePorAprobacion,
 } from "../../domain/jugador/jugador.publicacion.rules";
 
 function obtenerUidAdministrador(): string {
@@ -129,6 +130,7 @@ export const jugadoresRepository = {
     if (!solicitudId.trim()) {
       throw new Error("El identificador de la solicitud no es válido.");
     }
+    const uidAprobador = obtenerUidAdministrador();
 
     const solicitudRef = doc(
       db,
@@ -188,7 +190,11 @@ export const jugadoresRepository = {
         categoriaDeclarada: solicitud.categoriaDeclarada,
         estado: "activo",
         fechaRegistro: new Date(),
-        consentimientoPublicacion: consentimientoDesdeSolicitud(solicitud),
+        // Aprobar la solicitud es la verificación del permiso dado en el formulario.
+        consentimientoPublicacion: consentimientoVigentePorAprobacion(
+          consentimientoDesdeSolicitud(solicitud),
+          uidAprobador,
+        ),
       };
 
       transaction.set(jugadorRef, jugador);

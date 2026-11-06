@@ -7,6 +7,7 @@ import CircuitosPage from "../modules/circuitos/pages/CircuitosPage";
 import CircuitoDetallePage from "../modules/circuitos/pages/CircuitoDetallePage";
 import TorneosPage from "../modules/torneos/pages/TorneosPage";
 import TorneoDetallePage from "../modules/torneos/pages/TorneoDetallePage";
+import CompetenciaPublicaPage from "../modules/torneos/pages/CompetenciaPublicaPage";
 import UnirsePage from "../modules/unirse/pages/UnirsePage";
 
 export default function AppRoutes() {
@@ -22,6 +23,10 @@ export default function AppRoutes() {
         />
         <Route path="/torneos" element={<TorneosPage />} />
         <Route path="/torneos/:torneoId" element={<TorneoDetallePage />} />
+        <Route
+          path="/torneos/:torneoId/competencias/:competenciaId"
+          element={<CompetenciaPublicaPage />}
+        />
         <Route path="/unirse" element={<UnirsePage />} />
       </Route>
 
