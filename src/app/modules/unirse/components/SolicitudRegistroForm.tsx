@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { solicitudesRegistroRepository } from "../../../../infrastructure/repositories/solicitudesRegistroRepository";
+import { CATEGORIAS_DECLARABLES } from "../../../../domain/jugador/categoriaJugador";
 
 export default function SolicitudRegistroForm() {
   const [nombre, setNombre] = useState("");
@@ -162,12 +163,18 @@ export default function SolicitudRegistroForm() {
 
         <div>
           <label>Categoría declarada</label>
-          <input
-            type="text"
+          <select
             value={categoriaDeclarada}
             onChange={(event) => setCategoriaDeclarada(event.target.value)}
             required
-          />
+          >
+            <option value="">Seleccioná tu categoría</option>
+            {CATEGORIAS_DECLARABLES.map((categoria) => (
+              <option key={categoria} value={categoria}>
+                {categoria}
+              </option>
+            ))}
+          </select>
         </div>
 
         <fieldset>
