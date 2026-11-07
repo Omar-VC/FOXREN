@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { Jugador } from "../../../../domain/jugador/jugador.types";
+import { CATEGORIAS_ASIGNABLES } from "../../../../domain/jugador/categoriaJugador";
 
 interface Props {
   jugador: Jugador;
@@ -151,11 +152,23 @@ export default function JugadorForm({
 
       <div>
         <label>Categoría declarada</label>
-        <input
+        <select
           value={categoriaDeclarada}
           onChange={(event) => setCategoriaDeclarada(event.target.value)}
           required
-        />
+        >
+          <option value="">Seleccioná la categoría</option>
+          {/* Un valor antiguo que no está en la lista se conserva hasta que se cambie */}
+          {categoriaDeclarada &&
+            !(CATEGORIAS_ASIGNABLES as readonly string[]).includes(categoriaDeclarada) && (
+              <option value={categoriaDeclarada}>{categoriaDeclarada} (valor actual)</option>
+            )}
+          {CATEGORIAS_ASIGNABLES.map((categoria) => (
+            <option key={categoria} value={categoria}>
+              {categoria}
+            </option>
+          ))}
+        </select>
       </div>
 
       

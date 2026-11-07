@@ -12,6 +12,16 @@ export const CATEGORIAS_DECLARABLES = [
   "8va",
 ] as const;
 
+/**
+ * Categorías que puede asignar el administrador. Incluye 1ra y 2da, que no se
+ * ofrecen en el formulario público.
+ */
+export const CATEGORIAS_ASIGNABLES = [
+  "1ra",
+  "2da",
+  ...CATEGORIAS_DECLARABLES,
+] as const;
+
 export type CategoriaDeclarable = (typeof CATEGORIAS_DECLARABLES)[number];
 
 export function obtenerValorCategoriaJugador(

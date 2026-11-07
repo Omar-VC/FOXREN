@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  CATEGORIAS_ASIGNABLES,
   CATEGORIAS_DECLARABLES,
   obtenerValorCategoriaJugador,
 } from "../src/domain/jugador/categoriaJugador.ts";
@@ -17,4 +18,11 @@ test("las categorías declarables van de 3ra a 8va y todas se entienden", () => 
 test("texto sin número no es una categoría", () => {
   assert.equal(obtenerValorCategoriaJugador("tercera"), null);
   assert.equal(obtenerValorCategoriaJugador(""), null);
+});
+
+test("el administrador puede asignar también 1ra y 2da; el formulario público no las ofrece", () => {
+  assert.deepEqual([...CATEGORIAS_ASIGNABLES].slice(0, 2), ["1ra", "2da"]);
+  assert.equal(CATEGORIAS_ASIGNABLES.length, 8);
+  assert.ok(!(CATEGORIAS_DECLARABLES as readonly string[]).includes("1ra"));
+  assert.ok(!(CATEGORIAS_DECLARABLES as readonly string[]).includes("2da"));
 });
