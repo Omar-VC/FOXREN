@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   CATEGORIAS_ASIGNABLES,
+  CATALOGO_CATEGORIAS,
   CATEGORIAS_DECLARABLES,
+  descripcionDeCategoria,
   obtenerValorCategoriaJugador,
 } from "../src/domain/jugador/categoriaJugador.ts";
 
@@ -25,4 +27,17 @@ test("el administrador puede asignar también 1ra y 2da; el formulario público 
   assert.equal(CATEGORIAS_ASIGNABLES.length, 8);
   assert.ok(!(CATEGORIAS_DECLARABLES as readonly string[]).includes("1ra"));
   assert.ok(!(CATEGORIAS_DECLARABLES as readonly string[]).includes("2da"));
+});
+
+test("el catálogo es la fuente única: declarables y asignables salen de él", () => {
+  assert.deepEqual(
+    CATALOGO_CATEGORIAS.map((c) => c.nombre),
+    [...CATEGORIAS_ASIGNABLES],
+  );
+  assert.deepEqual(
+    CATALOGO_CATEGORIAS.filter((c) => c.declarable).map((c) => c.nombre),
+    [...CATEGORIAS_DECLARABLES],
+  );
+  assert.equal(descripcionDeCategoria("5ta"), "Quinta categoría");
+  assert.equal(descripcionDeCategoria("9na"), undefined);
 });

@@ -15,8 +15,7 @@ export function useCategorias() {
       setCargando(true);
       setError(null);
 
-      const datos =
-        await categoriasRepository.obtenerCategorias();
+      const datos = await categoriasRepository.obtenerCategorias();
 
       setCategorias(datos);
     } catch {
@@ -26,9 +25,16 @@ export function useCategorias() {
     }
   }, []);
 
-  async function crearCategoria(
-    datos: Omit<Categoria, "id">
-  ) {
+  async function crearCategoria(datos: Omit<Categoria, "id">) {
+    const yaExiste = categorias.some(
+      (item) =>
+        item.nombre.trim().toLowerCase() === datos.nombre.trim().toLowerCase(),
+    );
+    if (yaExiste) {
+      setError(`La categoría ${datos.nombre} ya existe.`);
+      return;
+    }
+
     try {
       setCreando(true);
       setError(null);

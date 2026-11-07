@@ -14,6 +14,7 @@ import FormatoPartidosAdmin from "../components/FormatoPartidosAdmin";
 import { useCompetenciaAdmin } from "../hooks/useCompetenciaAdmin";
 import { useRegistroResultado } from "../hooks/useRegistroResultado";
 import { generarPlayoffCompetencia } from "../../../../application/competencias/generarPlayoffCompetencia";
+import { actualizarRankingsDeCompetencia } from "../../../../application/ranking/actualizarRankingsCircuito";
 import { planificarPlayoff } from "../../../../domain/competencia/competencia.playoff.preparacion";
 import type { PlanPlayoff } from "../../../../domain/competencia/competencia.playoff.preparacion";
 import {
@@ -58,6 +59,12 @@ export default function CompetenciaAdminPage() {
     onExito: () => {
       actualizarPartidos();
       recargarCompetencia();
+      // El ranking público se recalcula en segundo plano: si falla, no bloquea la carga.
+      if (competenciaId) {
+        void actualizarRankingsDeCompetencia(competenciaId).catch((err) =>
+          console.error("No se pudo actualizar el ranking público:", err),
+        );
+      }
     },
   });
 
@@ -181,7 +188,6 @@ export default function CompetenciaAdminPage() {
         onGuardado={recargarCompetencia}
       />
 
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ParejasAdmin
           competenciaId={competencia.id}
@@ -204,9 +210,9 @@ export default function CompetenciaAdminPage() {
                 partidos={partidosZona}
                 resultados={resultados}
                 parejasClasificanPorZona={competencia.parejasClasificanPorZona ?? 2}
-                reglamento={competencia.reglamento}
-                nombrePareja={nombrePareja} 
                 formatoPartidoZona={competencia.formatoPartidoZona ?? "mejor_de_3"}
+                reglamento={competencia.reglamento}
+                nombrePareja={nombrePareja}
               />
             )}
           </div>

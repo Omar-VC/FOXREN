@@ -3,13 +3,8 @@ import CategoriaList from "../components/CategoriaList";
 import { useCategorias } from "../hooks/useCategorias";
 
 export default function AdminCategoriasPage() {
-  const {
-    categorias,
-    cargando,
-    creando,
-    error,
-    crearCategoria,
-  } = useCategorias();
+  const { categorias, cargando, creando, error, crearCategoria } =
+    useCategorias();
 
   if (cargando) {
     return (
@@ -30,7 +25,8 @@ export default function AdminCategoriasPage() {
           Administrar categorías
         </h1>
         <p className="text-xs text-[var(--color-text-muted)] m-0">
-          Creá y administrá las categorías disponibles para los torneos de FOXREN.
+          Creá y administrá las categorías disponibles para los torneos de
+          FOXREN.
         </p>
       </div>
 
@@ -45,6 +41,7 @@ export default function AdminCategoriasPage() {
         <h3 className="text-sm font-bold text-white m-0">Nueva categoría</h3>
         <CategoriaForm
           creando={creando}
+          existentes={categorias.map((categoria) => categoria.nombre)}
           onCrear={crearCategoria}
         />
       </div>
@@ -52,7 +49,9 @@ export default function AdminCategoriasPage() {
       {/* Listado de categorías */}
       <div className="space-y-4 pt-2">
         <div className="flex items-center justify-between border-b border-white/5 pb-3">
-          <h3 className="text-sm font-bold text-white m-0">Categorías registradas</h3>
+          <h3 className="text-sm font-bold text-white m-0">
+            Categorías registradas
+          </h3>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#32113d] text-[var(--color-accent)] border border-[var(--color-border)]">
             Total: {categorias.length}
           </span>
