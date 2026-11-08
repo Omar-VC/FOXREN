@@ -124,6 +124,8 @@ export function calcularRankingGenero(
 
 /** Lo único que se publica de cada jugador en un ranking: nunca IDs internos ni datos privados. */
 export interface FilaRankingPublico {
+  /** Identificador público del jugador, para enlazar a su perfil. */
+  idPublico?: string;
   posicion: number;
   nombre: string;
   apellido: string;
@@ -159,6 +161,7 @@ export function jugadorParaRanking(jugador: Jugador): JugadorParaRanking {
 export function construirFilasPublicas(
   filas: FilaRankingConJugador[],
   jugadores: Jugador[],
+  idsPublicos: ReadonlyMap<string, string> = new Map(),
 ): FilaRankingPublico[] {
   const porId = new Map(jugadores.map((jugador) => [jugador.id, jugador]));
   const publicas: FilaRankingPublico[] = [];
@@ -181,6 +184,8 @@ export function construirFilasPublicas(
     }
     const categoria = jugador.categoriaDeclarada?.trim();
     if (categoria) publica.categoria = categoria;
+    const idPublico = idsPublicos.get(fila.jugadorId);
+    if (idPublico) publica.idPublico = idPublico;
 
     publicas.push(publica);
   }

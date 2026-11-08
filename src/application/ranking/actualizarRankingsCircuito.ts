@@ -1,4 +1,4 @@
-import { doc, writeBatch } from "firebase/firestore";
+import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 
 import { db } from "../../infrastructure/firebase/firebase";
 import { circuitosRepository } from "../../infrastructure/repositories/circuitosRepository";
@@ -8,6 +8,7 @@ import { partidosRepository } from "../../infrastructure/repositories/partidosRe
 import { parejasRepository } from "../../infrastructure/repositories/parejasRepository";
 import { jugadoresRepository } from "../../infrastructure/repositories/jugadoresRepository";
 
+import type { Circuito } from "../../domain/circuito/circuito.types";
 import type { GeneroCompetencia } from "../../domain/competencia/competencia.types";
 import { categoriaEfectivaCompetencia } from "../../domain/ranking/ranking.puntos";
 import {
@@ -18,15 +19,19 @@ import {
   jugadorEsPublicable,
   jugadorParaRanking,
 } from "../../domain/ranking/ranking.circuito";
-import type {
-  CompetenciaParaRanking,
-  RankingPublico,
-} from "../../domain/ranking/ranking.circuito";
+import type { RankingPublico } from "../../domain/ranking/ranking.circuito";
+import { calcularIdPublico } from "../../domain/jugador/jugador.idPublico";
+import { calcularParticipaciones } from "../../domain/jugador/jugador.estadisticas";
+import type { CompetenciaParaPerfil } from "../../domain/jugador/jugador.estadisticas";
+import { construirPerfilPublico } from "../../domain/jugador/jugador.perfilPublico";
+import type { PosicionPublica } from "../../domain/jugador/jugador.perfilPublico";
 
-/** Colección de solo lectura para la web pública: nunca guarda datos privados. */
+/** Colecciones de solo lectura para la web pública: nunca guardan datos privados. */
 export const COLECCION_RANKINGS_PUBLICOS = "rankingsPublicos";
+export const COLECCION_PERFILES_PUBLICOS = "perfilesPublicos";
 
 const GENEROS: GeneroCompetencia[] = ["MASCULINO", "FEMENINO", "MIXTO"];
+const MAXIMO_POR_LOTE = 400;
 
 /** Qué se publicó, para poder explicarlo en pantalla cuando el ranking sale vacío. */
 export interface ResumenRanking {
@@ -36,91 +41,6 @@ export interface ResumenRanking {
   filasPorGenero: Record<GeneroCompetencia, number>;
 }
 
-/**
- * Recalcula y guarda los rankings públicos de un circuito (uno por género).
- * Entran solo los jugadores con permiso de publicación vigente; los activos
- * aparecen aunque no hayan jugado, con sus puntos iniciales.
- */
-export async function actualizarRankingsCircuito(circuitoId: string): Promise<ResumenRanking> {
-  const circuito = await circuitosRepository.obtenerCircuitoPorId(circuitoId);
-  if (!circuito) {
-    throw new Error("No se encontró el circuito.");
-  }
-
-  const torneos = await torneosRepository.obtenerTorneosPorCircuito(circuitoId);
-  const competenciasPorTorneo = await Promise.all(
-    torneos.map((torneo) => competenciasRepository.obtenerPorTorneoId(torneo.id)),
-  );
-  const competencias = competenciasPorTorneo
-    .flat()
-    .filter((competencia) => competenciaCuentaParaRanking(competencia.estado));
-
-  const datos = await Promise.all(
-    competencias.map(async (competencia) => {
-      const [partidos, parejas] = await Promise.all([
-        partidosRepository.getByCompetencia(competencia.id),
-        parejasRepository.obtenerPorCompetenciaId(competencia.id),
-      ]);
-      return { competencia, partidos, parejas };
-    }),
-  );
-
-  // Todos los jugadores: los que todavía no jugaron también figuran con sus puntos iniciales.
-  const jugadores = await jugadoresRepository.obtenerJugadores();
-  const publicables = jugadores.filter(jugadorEsPublicable).map(jugadorParaRanking);
-
-  const paraRanking: CompetenciaParaRanking[] = datos.map(
-    ({ competencia, partidos, parejas }) => ({
-      competenciaId: competencia.id,
-      genero: competencia.genero,
-      estado: competencia.estado,
-      categoria: categoriaEfectivaCompetencia(
-        competencia.tipoReglaCategoria,
-        competencia.valorReglaCategoria,
-      ),
-      partidos,
-      parejas: parejas.map((pareja) => ({
-        id: pareja.id,
-        jugador1Id: pareja.jugador1Id,
-        jugador2Id: pareja.jugador2Id,
-        estado: pareja.estado,
-      })),
-    }),
-  );
-
-  const batch = writeBatch(db);
-  const actualizadoEn = new Date();
-  const filasPorGenero = { MASCULINO: 0, FEMENINO: 0, MIXTO: 0 };
-
-  for (const genero of GENEROS) {
-    const filas = calcularRankingGenero(paraRanking, publicables, genero);
-    const filasPublicas = construirFilasPublicas(filas, jugadores);
-    filasPorGenero[genero] = filasPublicas.length;
-    const ranking: RankingPublico = {
-      circuitoId,
-      circuitoNombre: circuito.nombre,
-      temporada: circuito.temporada,
-      genero,
-      actualizadoEn,
-      filas: filasPublicas,
-    };
-
-    batch.set(
-      doc(db, COLECCION_RANKINGS_PUBLICOS, idRankingPublico(circuitoId, circuito.temporada, genero)),
-      ranking,
-    );
-  }
-
-  await batch.commit();
-
-  return {
-    circuitoNombre: circuito.nombre,
-    jugadoresTotales: jugadores.length,
-    jugadoresConPermiso: publicables.length,
-    filasPorGenero,
-  };
-}
-
 export interface ResultadoRankingCircuito {
   circuitoId: string;
   circuitoNombre: string;
@@ -128,18 +48,149 @@ export interface ResultadoRankingCircuito {
   error?: string;
 }
 
+/** Lee todas las competencias de un circuito con sus partidos y parejas. */
+async function cargarCompetenciasDelCircuito(
+  circuito: Circuito,
+): Promise<CompetenciaParaPerfil[]> {
+  const torneos = await torneosRepository.obtenerTorneosPorCircuito(circuito.id);
+
+  const porTorneo = await Promise.all(
+    torneos.map(async (torneo) => ({
+      torneo,
+      competencias: await competenciasRepository.obtenerPorTorneoId(torneo.id),
+    })),
+  );
+
+  const lista = porTorneo.flatMap(({ torneo, competencias }) =>
+    competencias
+      .filter((competencia) => competenciaCuentaParaRanking(competencia.estado))
+      .map((competencia) => ({ torneo, competencia })),
+  );
+
+  return Promise.all(
+    lista.map(async ({ torneo, competencia }) => {
+      const [partidos, parejas] = await Promise.all([
+        partidosRepository.getByCompetencia(competencia.id),
+        parejasRepository.obtenerPorCompetenciaId(competencia.id),
+      ]);
+
+      return {
+        competenciaId: competencia.id,
+        genero: competencia.genero,
+        estado: competencia.estado,
+        categoria: categoriaEfectivaCompetencia(
+          competencia.tipoReglaCategoria,
+          competencia.valorReglaCategoria,
+        ),
+        partidos,
+        parejas: parejas.map((pareja) => ({
+          id: pareja.id,
+          jugador1Id: pareja.jugador1Id,
+          jugador2Id: pareja.jugador2Id,
+          estado: pareja.estado,
+        })),
+        torneoNombre: torneo.nombre,
+        competenciaNombre: competencia.nombre,
+        circuitoNombre: circuito.nombre,
+      };
+    }),
+  );
+}
+
+/** Escribe documentos en lotes y borra los de la colección que ya no corresponden. */
+async function reemplazarColeccion(
+  coleccion: string,
+  documentos: Map<string, object>,
+): Promise<void> {
+  const existentes = await getDocs(collection(db, coleccion));
+  const operaciones: Array<(lote: ReturnType<typeof writeBatch>) => void> = [];
+
+  for (const [id, datos] of documentos) {
+    operaciones.push((lote) => lote.set(doc(db, coleccion, id), datos));
+  }
+  for (const existente of existentes.docs) {
+    if (!documentos.has(existente.id)) {
+      operaciones.push((lote) => lote.delete(existente.ref));
+    }
+  }
+
+  for (let i = 0; i < operaciones.length; i += MAXIMO_POR_LOTE) {
+    const lote = writeBatch(db);
+    for (const operacion of operaciones.slice(i, i + MAXIMO_POR_LOTE)) operacion(lote);
+    await lote.commit();
+  }
+}
+
 /**
- * Recalcula los rankings de todos los circuitos. Un circuito que falle no impide
- * recalcular los demás: el error queda en su resultado.
+ * Recalcula y publica los rankings de todos los circuitos (uno por género) y el
+ * perfil de cada jugador con permiso de publicación vigente. Los jugadores activos
+ * figuran aunque no hayan jugado, con sus puntos iniciales.
+ *
+ * Un circuito que falle no impide publicar los demás: el error queda en su resultado.
  */
 export async function actualizarTodosLosRankings(): Promise<ResultadoRankingCircuito[]> {
-  const circuitos = await circuitosRepository.obtenerCircuitos();
+  const [circuitos, jugadores] = await Promise.all([
+    circuitosRepository.obtenerCircuitos(),
+    jugadoresRepository.obtenerJugadores(),
+  ]);
+
+  const publicables = jugadores.filter(jugadorEsPublicable);
+  const paraRanking = publicables.map(jugadorParaRanking);
+  const idsPublicos = new Map(
+    await Promise.all(
+      publicables.map(async (jugador) => [jugador.id, await calcularIdPublico(jugador.id)] as const),
+    ),
+  );
+
   const resultados: ResultadoRankingCircuito[] = [];
+  const rankings = new Map<string, RankingPublico>();
+  const competenciasTodas: CompetenciaParaPerfil[] = [];
+  const posicionesPorJugador = new Map<string, PosicionPublica[]>();
+  const actualizadoEn = new Date();
 
   for (const circuito of circuitos) {
     try {
-      const resumen = await actualizarRankingsCircuito(circuito.id);
-      resultados.push({ circuitoId: circuito.id, circuitoNombre: circuito.nombre, resumen });
+      const competencias = await cargarCompetenciasDelCircuito(circuito);
+      competenciasTodas.push(...competencias);
+
+      const filasPorGenero = { MASCULINO: 0, FEMENINO: 0, MIXTO: 0 };
+
+      for (const genero of GENEROS) {
+        const filas = calcularRankingGenero(competencias, paraRanking, genero);
+        const filasPublicas = construirFilasPublicas(filas, jugadores, idsPublicos);
+        filasPorGenero[genero] = filasPublicas.length;
+
+        rankings.set(idRankingPublico(circuito.id, circuito.temporada, genero), {
+          circuitoId: circuito.id,
+          circuitoNombre: circuito.nombre,
+          temporada: circuito.temporada,
+          genero,
+          actualizadoEn,
+          filas: filasPublicas,
+        });
+
+        for (const fila of filas) {
+          const lista = posicionesPorJugador.get(fila.jugadorId) ?? [];
+          lista.push({
+            circuitoNombre: circuito.nombre,
+            genero,
+            posicion: fila.posicion,
+            puntos: fila.puntos,
+          });
+          posicionesPorJugador.set(fila.jugadorId, lista);
+        }
+      }
+
+      resultados.push({
+        circuitoId: circuito.id,
+        circuitoNombre: circuito.nombre,
+        resumen: {
+          circuitoNombre: circuito.nombre,
+          jugadoresTotales: jugadores.length,
+          jugadoresConPermiso: publicables.length,
+          filasPorGenero,
+        },
+      });
     } catch (error) {
       resultados.push({
         circuitoId: circuito.id,
@@ -149,10 +200,40 @@ export async function actualizarTodosLosRankings(): Promise<ResultadoRankingCirc
     }
   }
 
+  // Si un circuito falló, no se tocan los rankings ya publicados para no perderlos.
+  const huboErrores = resultados.some((resultado) => resultado.error);
+
+  const perfiles = new Map<string, object>();
+  for (const jugador of publicables) {
+    const idPublico = idsPublicos.get(jugador.id);
+    if (!idPublico) continue;
+    perfiles.set(
+      idPublico,
+      construirPerfilPublico({
+        jugador,
+        idPublico,
+        participaciones: calcularParticipaciones(jugador.id, competenciasTodas),
+        posiciones: posicionesPorJugador.get(jugador.id) ?? [],
+        hoy: actualizadoEn,
+      }),
+    );
+  }
+
+  if (huboErrores) {
+    const lote = writeBatch(db);
+    for (const [id, ranking] of rankings) {
+      lote.set(doc(db, COLECCION_RANKINGS_PUBLICOS, id), ranking);
+    }
+    await lote.commit();
+  } else {
+    await reemplazarColeccion(COLECCION_RANKINGS_PUBLICOS, rankings);
+    await reemplazarColeccion(COLECCION_PERFILES_PUBLICOS, perfiles);
+  }
+
   return resultados;
 }
 
-/** Recalcula los rankings del circuito al que pertenece una competencia. */
+/** Recalcula los rankings y perfiles cuando cambia una competencia de un torneo con circuito. */
 export async function actualizarRankingsDeCompetencia(
   competenciaId: string,
 ): Promise<ResumenRanking | null> {
@@ -163,5 +244,6 @@ export async function actualizarRankingsDeCompetencia(
   // Sin circuito no hay ranking que publicar.
   if (!torneo?.circuitoId) return null;
 
-  return actualizarRankingsCircuito(torneo.circuitoId);
+  const resultados = await actualizarTodosLosRankings();
+  return resultados.find((resultado) => resultado.circuitoId === torneo.circuitoId)?.resumen ?? null;
 }

@@ -9,6 +9,7 @@ import TorneosPage from "../modules/torneos/pages/TorneosPage";
 import TorneoDetallePage from "../modules/torneos/pages/TorneoDetallePage";
 import CompetenciaPublicaPage from "../modules/torneos/pages/CompetenciaPublicaPage";
 import RankingPublicoPage from "../modules/ranking/pages/RankingPublicoPage";
+import PerfilJugadorPublicoPage from "../modules/jugadores/pages/PerfilJugadorPublicoPage";
 import UnirsePage from "../modules/unirse/pages/UnirsePage";
 
 export default function AppRoutes() {
@@ -29,6 +30,7 @@ export default function AppRoutes() {
           element={<CompetenciaPublicaPage />}
         />
         <Route path="/ranking" element={<RankingPublicoPage />} />
+        <Route path="/jugadores/:idPublico" element={<PerfilJugadorPublicoPage />} />
         <Route path="/unirse" element={<UnirsePage />} />
       </Route>
 

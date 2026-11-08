@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import type { FilaRankingPublico } from "../../../../domain/ranking/ranking.circuito";
 
 interface Props {
@@ -35,9 +37,18 @@ export default function TablaRankingPublico({ filas }: Props) {
                 {fila.posicion}
               </td>
               <td className="py-2.5 pr-3">
-                <span className="font-semibold text-white">
-                  {fila.nombre} {fila.apellido}
-                </span>
+                {fila.idPublico ? (
+                  <Link
+                    to={`/jugadores/${fila.idPublico}`}
+                    className="font-semibold text-white hover:text-[var(--color-accent)] transition-colors"
+                  >
+                    {fila.nombre} {fila.apellido}
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-white">
+                    {fila.nombre} {fila.apellido}
+                  </span>
+                )}
                 {fila.apodo && (
                   <span className="ml-2 text-xs text-[var(--color-text-muted)]">
                     “{fila.apodo}”
