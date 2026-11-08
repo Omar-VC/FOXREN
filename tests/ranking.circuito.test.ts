@@ -32,7 +32,7 @@ function competencia(datos: Partial<CompetenciaParaRanking>): CompetenciaParaRan
   };
 }
 
-const todos = ["j1", "j2", "j3", "j4"].map((id) => ({ id, categoria: 5 }));
+const todos = ["j1", "j2", "j3", "j4"].map((id) => ({ id, categoria: 5, sexo: "masculino" as const }));
 
 test("ranking: los dos jugadores de la pareja campeona suman los mismos puntos", () => {
   const filas = calcularRankingGenero([competencia({})], todos, "MASCULINO");
@@ -49,7 +49,7 @@ test("ranking: los dos jugadores de la pareja campeona suman los mismos puntos",
 test("ranking: solo entran jugadores publicables y se renumera entre ellos", () => {
   const filas = calcularRankingGenero(
     [competencia({})],
-    [{ id: "j3", categoria: 5 }, { id: "j1", categoria: 5 }],
+    [{ id: "j3", categoria: 5, sexo: "masculino" as const }, { id: "j1", categoria: 5, sexo: "masculino" as const }],
     "MASCULINO",
   );
   assert.deepEqual(filas.map((f) => [f.jugadorId, f.posicion]), [["j1", 1], ["j3", 2]]);
@@ -61,8 +61,11 @@ test("ranking: filtra por género y por estado de la competencia", () => {
     competencia({ competenciaId: "borrador", estado: "borrador" }),
     competencia({ competenciaId: "cancelada", estado: "cancelada" }),
   ];
-  assert.equal(calcularRankingGenero(competencias, todos, "MASCULINO").length, 0);
-  assert.equal(calcularRankingGenero(competencias, todos, "FEMENINO").length, 4);
+  const mujeres = todos.map((j) => ({ ...j, sexo: "femenino" as const }));
+  // sin resultados masculinos que cuenten, los jugadores (hombres) figuran solo con puntos iniciales
+  assert.ok(calcularRankingGenero(competencias, todos, "MASCULINO").every((f) => f.competenciasJugadas === 0));
+  assert.ok(calcularRankingGenero(competencias, mujeres, "FEMENINO").every((f) => f.competenciasJugadas === 1));
+  assert.equal(calcularRankingGenero(competencias, mujeres, "FEMENINO").length, 4);
   assert.equal(competenciaCuentaParaRanking("en_curso"), true);
   assert.equal(competenciaCuentaParaRanking("finalizada"), true);
   // con zonas, la competencia sigue "inscripciones cerradas" mientras se juegan las zonas
@@ -71,16 +74,33 @@ test("ranking: filtra por género y por estado de la competencia", () => {
   assert.equal(competenciaCuentaParaRanking("cancelada"), false);
 });
 
-test("ranking: parejas dadas de baja y jugadores que no jugaron no suman", () => {
+test("ranking: parejas dadas de baja no suman, pero el jugador figura con puntos iniciales", () => {
   const filas = calcularRankingGenero(
     [competencia({ parejas: [
       { id: "P1", jugador1Id: "j1", jugador2Id: "j2", estado: "activa" },
       { id: "P2", jugador1Id: "j3", jugador2Id: "j4", estado: "baja" },
     ] })],
-    [...todos, { id: "j9", categoria: 3 }],
+    todos,
     "MASCULINO",
   );
-  assert.deepEqual(filas.map((f) => f.jugadorId).sort(), ["j1", "j2"]);
+  const porId = Object.fromEntries(filas.map((f) => [f.jugadorId, f]));
+  assert.equal(porId.j1.competenciasJugadas, 1);
+  assert.equal(porId.j3.competenciasJugadas, 0);
+  assert.equal(porId.j3.puntos, 140);
+});
+
+test("ranking: jugadores sin partidos figuran con puntos iniciales según sexo, actividad y género", () => {
+  const sinJugar = [
+    { id: "h", categoria: 3, sexo: "masculino" as const },
+    { id: "m", categoria: 5, sexo: "femenino" as const },
+    { id: "inactivo", categoria: 4, sexo: "masculino" as const, activo: false },
+  ];
+  const masc = calcularRankingGenero([], sinJugar, "MASCULINO");
+  assert.deepEqual(masc.map((f) => [f.jugadorId, f.puntos]), [["h", 320]]);
+  const fem = calcularRankingGenero([], sinJugar, "FEMENINO");
+  assert.deepEqual(fem.map((f) => [f.jugadorId, f.puntos]), [["m", 140]]);
+  // el mixto lo arma quien juega una competencia mixta, no el sexo
+  assert.equal(calcularRankingGenero([], sinJugar, "MIXTO").length, 0);
 });
 
 test("ranking: la categoría de la competencia multiplica los puntos", () => {

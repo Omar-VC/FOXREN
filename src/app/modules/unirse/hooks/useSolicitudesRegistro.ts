@@ -4,6 +4,7 @@ import { solicitudesRegistroRepository } from "../../../../infrastructure/reposi
 import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
 
 import type { SolicitudRegistro } from "../../../../domain/SolicitudRegistro/solicitudRegistro.types";
+import { actualizarTodosLosRankings } from "../../../../application/ranking/actualizarRankingsCircuito";
 
 export function useSolicitudesRegistro() {
   const [solicitudes, setSolicitudes] = useState<SolicitudRegistro[]>([]);
@@ -32,6 +33,9 @@ export function useSolicitudesRegistro() {
       setError(null);
 
       await jugadoresRepository.aprobarDesdeSolicitud(solicitud.id);
+      void actualizarTodosLosRankings().catch((err) =>
+        console.error("No se pudo actualizar el ranking público:", err),
+      );
 
       await cargarSolicitudes();
     } catch (error) {

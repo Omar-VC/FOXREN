@@ -13,6 +13,7 @@ import AdminJugadoresPage from "../../modules/jugadores/pages/AdminJugadoresPage
 import AdminJugadorDetallePage from "../../modules/jugadores/pages/AdminJugadorDetallePage";
 import CompetenciaAdminPage from "../../modules/torneos/pages/CompetenciaAdminPage";
 import AdminOrganizadoresPage from "../../modules/organizadores/pages/AdminOrganizadoresPage";
+import AdminRankingPage from "../../modules/ranking/pages/AdminRankingPage";
 
 export default function AdminRoutes() {
   return (
@@ -29,14 +30,18 @@ export default function AdminRoutes() {
         <Route path="/" element={<AdminInicioPage />} />
         <Route path="/circuitos" element={<AdminCircuitosPage />} />
         <Route path="/torneos" element={<AdminTorneosPage />} />
-        <Route path="/torneos/:torneoId" element={<AdminTorneoDetallePage />} /> {/* <-- Ruta específica del torneo */}
+        <Route
+          path="/torneos/:torneoId"
+          element={<AdminTorneoDetallePage />}
+        />{" "}
+        {/* <-- Ruta específica del torneo */}
         <Route
           path="/torneos/:torneoId/competencias/:competenciaId"
           element={<CompetenciaAdminPage />}
         />
         <Route path="/jugadores" element={<AdminJugadoresPage />} />
         <Route path="/jugadores/:id" element={<AdminJugadorDetallePage />} />
-        <Route path="/ranking" element={<div>Administrar ranking</div>} />
+        <Route path="/ranking" element={<AdminRankingPage />} />
         <Route path="/complejos" element={<AdminComplejosPage />} />
         <Route path="/categorias" element={<AdminCategoriasPage />} />
         <Route path="/organizadores" element={<AdminOrganizadoresPage />} />

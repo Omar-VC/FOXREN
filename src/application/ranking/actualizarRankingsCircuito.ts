@@ -28,11 +28,20 @@ export const COLECCION_RANKINGS_PUBLICOS = "rankingsPublicos";
 
 const GENEROS: GeneroCompetencia[] = ["MASCULINO", "FEMENINO", "MIXTO"];
 
+/** Qué se publicó, para poder explicarlo en pantalla cuando el ranking sale vacío. */
+export interface ResumenRanking {
+  circuitoNombre: string;
+  jugadoresTotales: number;
+  jugadoresConPermiso: number;
+  filasPorGenero: Record<GeneroCompetencia, number>;
+}
+
 /**
  * Recalcula y guarda los rankings públicos de un circuito (uno por género).
- * Entran solo los jugadores con permiso de publicación vigente.
+ * Entran solo los jugadores con permiso de publicación vigente; los activos
+ * aparecen aunque no hayan jugado, con sus puntos iniciales.
  */
-export async function actualizarRankingsCircuito(circuitoId: string): Promise<void> {
+export async function actualizarRankingsCircuito(circuitoId: string): Promise<ResumenRanking> {
   const circuito = await circuitosRepository.obtenerCircuitoPorId(circuitoId);
   if (!circuito) {
     throw new Error("No se encontró el circuito.");
@@ -56,14 +65,8 @@ export async function actualizarRankingsCircuito(circuitoId: string): Promise<vo
     }),
   );
 
-  const idsJugadores = [
-    ...new Set(
-      datos.flatMap(({ parejas }) =>
-        parejas.flatMap((pareja) => [pareja.jugador1Id, pareja.jugador2Id]),
-      ),
-    ),
-  ];
-  const jugadores = await jugadoresRepository.obtenerPorIds(idsJugadores);
+  // Todos los jugadores: los que todavía no jugaron también figuran con sus puntos iniciales.
+  const jugadores = await jugadoresRepository.obtenerJugadores();
   const publicables = jugadores.filter(jugadorEsPublicable).map(jugadorParaRanking);
 
   const paraRanking: CompetenciaParaRanking[] = datos.map(
@@ -87,15 +90,19 @@ export async function actualizarRankingsCircuito(circuitoId: string): Promise<vo
 
   const batch = writeBatch(db);
   const actualizadoEn = new Date();
+  const filasPorGenero = { MASCULINO: 0, FEMENINO: 0, MIXTO: 0 };
 
   for (const genero of GENEROS) {
     const filas = calcularRankingGenero(paraRanking, publicables, genero);
+    const filasPublicas = construirFilasPublicas(filas, jugadores);
+    filasPorGenero[genero] = filasPublicas.length;
     const ranking: RankingPublico = {
       circuitoId,
+      circuitoNombre: circuito.nombre,
       temporada: circuito.temporada,
       genero,
       actualizadoEn,
-      filas: construirFilasPublicas(filas, jugadores),
+      filas: filasPublicas,
     };
 
     batch.set(
@@ -105,17 +112,56 @@ export async function actualizarRankingsCircuito(circuitoId: string): Promise<vo
   }
 
   await batch.commit();
+
+  return {
+    circuitoNombre: circuito.nombre,
+    jugadoresTotales: jugadores.length,
+    jugadoresConPermiso: publicables.length,
+    filasPorGenero,
+  };
+}
+
+export interface ResultadoRankingCircuito {
+  circuitoId: string;
+  circuitoNombre: string;
+  resumen?: ResumenRanking;
+  error?: string;
+}
+
+/**
+ * Recalcula los rankings de todos los circuitos. Un circuito que falle no impide
+ * recalcular los demás: el error queda en su resultado.
+ */
+export async function actualizarTodosLosRankings(): Promise<ResultadoRankingCircuito[]> {
+  const circuitos = await circuitosRepository.obtenerCircuitos();
+  const resultados: ResultadoRankingCircuito[] = [];
+
+  for (const circuito of circuitos) {
+    try {
+      const resumen = await actualizarRankingsCircuito(circuito.id);
+      resultados.push({ circuitoId: circuito.id, circuitoNombre: circuito.nombre, resumen });
+    } catch (error) {
+      resultados.push({
+        circuitoId: circuito.id,
+        circuitoNombre: circuito.nombre,
+        error: error instanceof Error ? error.message : "Error desconocido.",
+      });
+    }
+  }
+
+  return resultados;
 }
 
 /** Recalcula los rankings del circuito al que pertenece una competencia. */
 export async function actualizarRankingsDeCompetencia(
   competenciaId: string,
-): Promise<void> {
+): Promise<ResumenRanking | null> {
   const competencia = await competenciasRepository.obtenerPorId(competenciaId);
-  if (!competencia) return;
+  if (!competencia) return null;
 
   const torneo = await torneosRepository.obtenerTorneoPorId(competencia.torneoId);
-  if (!torneo?.circuitoId) return;
+  // Sin circuito no hay ranking que publicar.
+  if (!torneo?.circuitoId) return null;
 
-  await actualizarRankingsCircuito(torneo.circuitoId);
+  return actualizarRankingsCircuito(torneo.circuitoId);
 }

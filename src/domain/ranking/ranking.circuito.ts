@@ -50,7 +50,13 @@ export interface JugadorParaRanking {
   id: string;
   /** Categoría del jugador (1 a 8); null si no es válida. */
   categoria: number | null;
+  /** Sexo del jugador: ubica a los que todavía no jugaron en el ranking masculino o femenino. */
+  sexo?: "masculino" | "femenino";
+  /** Los inactivos solo figuran si ya sumaron resultados. Si no se informa, se asume activo. */
+  activo?: boolean;
 }
+
+const SEXO_DEL_GENERO = { MASCULINO: "masculino", FEMENINO: "femenino" } as const;
 
 export interface FilaRankingConJugador extends FilaRanking {
   jugadorId: string;
@@ -58,8 +64,12 @@ export interface FilaRankingConJugador extends FilaRanking {
 
 /**
  * Ranking de un género dentro de un conjunto de competencias (las de un circuito).
- * Solo entran los jugadores recibidos en `jugadoresPublicables` (con permiso de
- * publicación) que jugaron al menos una competencia de ese género.
+ * Entran solo los jugadores recibidos en `jugadoresPublicables` (con permiso de
+ * publicación):
+ * - Masculino y femenino: todos los jugadores activos de ese sexo, aunque todavía
+ *   no hayan jugado (figuran con sus puntos iniciales), más quien haya jugado.
+ * - Mixto: solo quien jugó una competencia mixta, porque el mixto lo define el
+ *   torneo y no el jugador.
  */
 export function calcularRankingGenero(
   competencias: CompetenciaParaRanking[],
@@ -94,7 +104,11 @@ export function calcularRankingGenero(
   }
 
   const entradas = jugadoresPublicables
-    .filter((jugador) => resultadosPorJugador.has(jugador.id))
+    .filter((jugador) => {
+      if (resultadosPorJugador.has(jugador.id)) return true;
+      if (genero === "MIXTO") return false;
+      return jugador.activo !== false && jugador.sexo === SEXO_DEL_GENERO[genero];
+    })
     .map((jugador) => ({
       jugadorId: jugador.id,
       categoria: jugador.categoria,
@@ -121,6 +135,7 @@ export interface FilaRankingPublico {
 
 export interface RankingPublico {
   circuitoId: string;
+  circuitoNombre: string;
   temporada: string;
   genero: GeneroCompetencia;
   actualizadoEn: Date;
@@ -135,6 +150,8 @@ export function jugadorParaRanking(jugador: Jugador): JugadorParaRanking {
   return {
     id: jugador.id,
     categoria: obtenerValorCategoriaJugador(jugador.categoriaDeclarada ?? ""),
+    sexo: jugador.sexo,
+    activo: jugador.estado !== "inactivo",
   };
 }
 
