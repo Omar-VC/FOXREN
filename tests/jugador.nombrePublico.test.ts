@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   NOMBRE_JUGADOR_RESERVADO,
+  nombreVisibleDesdePerfil,
   nombreVisibleJugador,
 } from "../src/domain/jugador/jugador.nombrePublico.ts";
 
@@ -90,4 +91,14 @@ test("aprobar no publica sin permiso explícito ni reactiva un permiso revocado"
   );
   const revocado = { ...pendiente, estado: "revocado" as const, fechaRetiro: new Date() };
   assert.equal(consentimientoVigentePorAprobacion(revocado, "uid-admin").estado, "revocado");
+});
+
+test("perfil público: sin perfil, reservado; con perfil, nombre y apodo ya filtrado", () => {
+  assert.equal(nombreVisibleDesdePerfil(undefined), NOMBRE_JUGADOR_RESERVADO);
+  assert.equal(nombreVisibleDesdePerfil({ nombre: " ", apellido: "" }), NOMBRE_JUGADOR_RESERVADO);
+  assert.equal(nombreVisibleDesdePerfil({ nombre: "Ana", apellido: "Pérez" }), "Ana Pérez");
+  assert.equal(
+    nombreVisibleDesdePerfil({ nombre: "Ana", apellido: "Pérez", apodo: "Anita" }),
+    'Ana Pérez "Anita"',
+  );
 });

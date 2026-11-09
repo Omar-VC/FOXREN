@@ -1,6 +1,7 @@
 import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 
 import { db } from "../../infrastructure/firebase/firebase";
+import { COLLECTIONS } from "../../infrastructure/firebase/collections";
 import { circuitosRepository } from "../../infrastructure/repositories/circuitosRepository";
 import { torneosRepository } from "../../infrastructure/repositories/torneosRepository";
 import { competenciasRepository } from "../../infrastructure/repositories/competenciasRepository";
@@ -27,8 +28,8 @@ import { construirPerfilPublico } from "../../domain/jugador/jugador.perfilPubli
 import type { PosicionPublica } from "../../domain/jugador/jugador.perfilPublico";
 
 /** Colecciones de solo lectura para la web pública: nunca guardan datos privados. */
-export const COLECCION_RANKINGS_PUBLICOS = "rankingsPublicos";
-export const COLECCION_PERFILES_PUBLICOS = "perfilesPublicos";
+export const COLECCION_RANKINGS_PUBLICOS = COLLECTIONS.rankingsPublicos;
+export const COLECCION_PERFILES_PUBLICOS = COLLECTIONS.jugadoresPublicos;
 
 const GENEROS: GeneroCompetencia[] = ["MASCULINO", "FEMENINO", "MIXTO"];
 const MAXIMO_POR_LOTE = 400;

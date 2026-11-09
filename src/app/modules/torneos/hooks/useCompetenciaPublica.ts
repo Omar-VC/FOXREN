@@ -1,27 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  documentId,
+  getDocs,
+  onSnapshot,
+  query,
+  where,
+} from "firebase/firestore";
 
 import { db } from "../../../../infrastructure/firebase/firebase";
 import { COLLECTIONS } from "../../../../infrastructure/firebase/collections";
 import { competenciaMapper } from "../../../../infrastructure/mappers/competencia.mapper";
 import { partidoMapper } from "../../../../infrastructure/mappers/partido.mapper";
 import { resultadoRepository } from "../../../../infrastructure/repositories/resultadoRepository";
-import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
 import type { Competencia } from "../../../../domain/competencia/competencia.types";
 import type { Zona } from "../../../../domain/competencia/competencia.zonas.types";
 import type { Partido } from "../../../../domain/partido/partido.types";
 import type { Pareja } from "../../../../domain/pareja/pareja.types";
-import type { Jugador } from "../../../../domain/jugador/jugador.types";
 import type { Resultado } from "../../../../domain/resultado/resultado.types";
-import { nombreVisibleJugador } from "../../../../domain/jugador/jugador.nombrePublico";
+import { nombreVisibleDesdePerfil } from "../../../../domain/jugador/jugador.nombrePublico";
+import type { NombrePerfilPublico } from "../../../../domain/jugador/jugador.nombrePublico";
+import { calcularIdPublico } from "../../../../domain/jugador/jugador.idPublico";
+
+const MAXIMO_IN = 30;
 
 /**
  * Datos de una competencia para la web pública, actualizados en tiempo real.
  *
- * IMPORTANTE: los nombres siempre pasan por `nombreVisibleJugador`, así que la
- * pantalla nunca muestra a un jugador sin consentimiento. Todavía se leen los
- * documentos de `jugadores` desde el navegador: cuando exista la colección de
- * proyección pública, solo hay que cambiar la lectura de jugadores acá.
+ * Los nombres salen de la colección pública de jugadores (sin datos privados),
+ * donde solo existe quien dio permiso de publicación. Quien no tiene documento
+ * se muestra como "Jugador reservado". La web pública nunca lee `jugadores`.
  */
 export function useCompetenciaPublica(competenciaId: string) {
   const [competencia, setCompetencia] = useState<Competencia | null>(null);
@@ -29,7 +38,9 @@ export function useCompetenciaPublica(competenciaId: string) {
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [parejas, setParejas] = useState<Pareja[]>([]);
   const [resultados, setResultados] = useState<Resultado[]>([]);
-  const [jugadores, setJugadores] = useState<Jugador[]>([]);
+  const [nombresPublicos, setNombresPublicos] = useState<Map<string, NombrePerfilPublico>>(
+    new Map(),
+  );
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
@@ -111,7 +122,7 @@ export function useCompetenciaPublica(competenciaId: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsPartidos]);
 
-  /* ---- Jugadores de las parejas ---- */
+  /* ---- Nombres públicos de los jugadores de las parejas ---- */
   const idsJugadores = useMemo(
     () =>
       [...new Set(parejas.flatMap((p) => [p.jugador1Id, p.jugador2Id]))]
@@ -123,17 +134,39 @@ export function useCompetenciaPublica(competenciaId: string) {
   useEffect(() => {
     let cancelado = false;
     if (!idsJugadores) {
-      setJugadores([]);
+      setNombresPublicos(new Map());
       return;
     }
-    jugadoresRepository
-      .obtenerPorIds(idsJugadores.split("|"))
-      .then((datos) => {
-        if (!cancelado) setJugadores(datos);
-      })
-      .catch(() => {
-        if (!cancelado) setError("No se pudieron cargar las parejas.");
-      });
+
+    async function cargarNombres() {
+      // El documento público se identifica con un ID derivado: no revela el ID interno.
+      const internoPorPublico = new Map<string, string>();
+      for (const id of idsJugadores.split("|")) {
+        internoPorPublico.set(await calcularIdPublico(id), id);
+      }
+
+      const idsPublicos = [...internoPorPublico.keys()];
+      const nombres = new Map<string, NombrePerfilPublico>();
+
+      for (let i = 0; i < idsPublicos.length; i += MAXIMO_IN) {
+        const lote = idsPublicos.slice(i, i + MAXIMO_IN);
+        const snap = await getDocs(
+          query(collection(db, COLLECTIONS.jugadoresPublicos), where(documentId(), "in", lote)),
+        );
+        for (const documento of snap.docs) {
+          const interno = internoPorPublico.get(documento.id);
+          if (!interno) continue;
+          const { nombre, apellido, apodo } = documento.data() as NombrePerfilPublico;
+          nombres.set(interno, { nombre, apellido, apodo });
+        }
+      }
+
+      if (!cancelado) setNombresPublicos(nombres);
+    }
+
+    cargarNombres().catch(() => {
+      if (!cancelado) setError("No se pudieron cargar las parejas.");
+    });
     return () => {
       cancelado = true;
     };
@@ -141,7 +174,7 @@ export function useCompetenciaPublica(competenciaId: string) {
 
   /* ---- Nombres públicos ---- */
   function nombreJugadorPublico(jugadorId: string): string {
-    return nombreVisibleJugador(jugadores.find((j) => j.id === jugadorId));
+    return nombreVisibleDesdePerfil(nombresPublicos.get(jugadorId));
   }
 
   function nombrePareja(parejaId: string): string {
