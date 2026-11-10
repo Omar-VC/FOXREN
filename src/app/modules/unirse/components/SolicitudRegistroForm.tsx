@@ -186,6 +186,10 @@ export default function SolicitudRegistroForm() {
             tu registro. Nunca se publicará tu DNI, fecha de nacimiento,
             teléfono ni email.
           </p>
+          <p>
+            Para poder inscribirte en sus torneos, los administradores de los
+            complejos podrán ver tu nombre, apellido, categoría y sexo.
+          </p>
           <label>
             <input
               type="checkbox"

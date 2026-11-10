@@ -10,7 +10,8 @@ import {
 import { db } from "../../infrastructure/firebase/firebase";
 import { COLLECTIONS } from "../../infrastructure/firebase/collections";
 import { competenciaMapper } from "../../infrastructure/mappers/competencia.mapper";
-import type { Jugador } from "../../domain/jugador/jugador.types";
+import { refPadronJugador } from "../../infrastructure/repositories/padronRepository";
+import type { PadronJugador } from "../../domain/jugador/jugador.padron";
 import type { Pareja } from "../../domain/pareja/pareja.types";
 import {
   competenciaAceptaInscripciones,
@@ -28,6 +29,11 @@ function crearIdReserva(competenciaId: string, jugadorId: string): string {
   return `${encodeURIComponent(competenciaId)}_${encodeURIComponent(jugadorId)}`;
 }
 
+/**
+ * Inscribe una pareja. Los jugadores se validan contra el padrón (categoría y
+ * estado), que no tiene datos privados: así lo puede hacer también el
+ * administrador de un complejo.
+ */
 export async function registrarPareja(
   datos: DatosRegistrarPareja,
 ): Promise<string> {
@@ -36,8 +42,8 @@ export async function registrarPareja(
   }
 
   const competenciaRef = doc(db, COLLECTIONS.competencias, datos.competenciaId);
-  const jugador1Ref = doc(db, COLLECTIONS.jugadores, datos.jugador1Id);
-  const jugador2Ref = doc(db, COLLECTIONS.jugadores, datos.jugador2Id);
+  const jugador1Ref = refPadronJugador(datos.jugador1Id);
+  const jugador2Ref = refPadronJugador(datos.jugador2Id);
   const parejasQuery = query(
     collection(db, COLLECTIONS.parejas),
     where("competenciaId", "==", datos.competenciaId),
@@ -107,11 +113,11 @@ export async function registrarPareja(
     const jugador1 = {
       id: jugador1Snapshot.id,
       ...jugador1Snapshot.data(),
-    } as Jugador;
+    } as PadronJugador;
     const jugador2 = {
       id: jugador2Snapshot.id,
       ...jugador2Snapshot.data(),
-    } as Jugador;
+    } as PadronJugador;
 
     if (jugador1.estado !== "activo" || jugador2.estado !== "activo") {
       throw new Error("Solo se pueden inscribir jugadores activos.");

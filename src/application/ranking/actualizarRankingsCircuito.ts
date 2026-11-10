@@ -21,6 +21,7 @@ import {
   jugadorParaRanking,
 } from "../../domain/ranking/ranking.circuito";
 import type { RankingPublico } from "../../domain/ranking/ranking.circuito";
+import { sincronizarPadron } from "../padron/sincronizarPadron";
 import { calcularIdPublico } from "../../domain/jugador/jugador.idPublico";
 import { calcularParticipaciones } from "../../domain/jugador/jugador.estadisticas";
 import type { CompetenciaParaPerfil } from "../../domain/jugador/jugador.estadisticas";
@@ -134,6 +135,11 @@ export async function actualizarTodosLosRankings(): Promise<ResultadoRankingCirc
     circuitosRepository.obtenerCircuitos(),
     jugadoresRepository.obtenerJugadores(),
   ]);
+
+  // Mantiene al día la lista que ven los complejos; si falla, no frena el ranking.
+  await sincronizarPadron(jugadores).catch((error) =>
+    console.error("No se pudo sincronizar el padrón de jugadores:", error),
+  );
 
   const publicables = jugadores.filter(jugadorEsPublicable);
   const paraRanking = publicables.map(jugadorParaRanking);

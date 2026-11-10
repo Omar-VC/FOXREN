@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
 import type { Pareja } from "../../../../domain/pareja/pareja.types";
-import type { Jugador } from "../../../../domain/jugador/jugador.types";
+import type { PadronJugador } from "../../../../domain/jugador/jugador.padron";
 
 import { parejasRepository } from "../../../../infrastructure/repositories/parejasRepository";
-import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
+import { padronRepository } from "../../../../infrastructure/repositories/padronRepository";
 import { registrarPareja } from "../../../../application/parejas/registrarPareja";
 
 interface Props {
@@ -17,7 +17,7 @@ export default function ParejasAdmin({
   onParejaRegistrada,
 }: Props) {
   const [parejas, setParejas] = useState<Pareja[]>([]);
-  const [jugadoresPorId, setJugadoresPorId] = useState<Record<string, Jugador>>(
+  const [jugadoresPorId, setJugadoresPorId] = useState<Record<string, PadronJugador>>(
     {},
   );
 
@@ -27,8 +27,8 @@ export default function ParejasAdmin({
   const [dniJugador1, setDniJugador1] = useState("");
   const [dniJugador2, setDniJugador2] = useState("");
 
-  const [jugador1, setJugador1] = useState<Jugador | null>(null);
-  const [jugador2, setJugador2] = useState<Jugador | null>(null);
+  const [jugador1, setJugador1] = useState<PadronJugador | null>(null);
+    const [jugador2, setJugador2] = useState<PadronJugador | null>(null);
 
   const [buscandoJugador1, setBuscandoJugador1] = useState(false);
   const [buscandoJugador2, setBuscandoJugador2] = useState(false);
@@ -55,9 +55,9 @@ export default function ParejasAdmin({
           ),
         );
 
-        const jugadores = await jugadoresRepository.obtenerPorIds(idsJugadores);
+        const jugadores = await padronRepository.obtenerPorIds(idsJugadores);
 
-        const jugadoresEncontrados: Record<string, Jugador> = {};
+          const jugadoresEncontrados: Record<string, PadronJugador> = {};
 
         jugadores.forEach((jugador) => {
           jugadoresEncontrados[jugador.id] = jugador;
@@ -85,7 +85,7 @@ export default function ParejasAdmin({
       setErrorJugador1(null);
       setJugador1(null);
 
-      const jugador = await jugadoresRepository.obtenerJugadorPorDni(
+      const jugador = await padronRepository.buscarPorDni(
         dniJugador1.trim(),
       );
 
@@ -113,7 +113,7 @@ export default function ParejasAdmin({
       setErrorJugador2(null);
       setJugador2(null);
 
-      const jugador = await jugadoresRepository.obtenerJugadorPorDni(
+        const jugador = await padronRepository.buscarPorDni(
         dniJugador2.trim(),
       );
 

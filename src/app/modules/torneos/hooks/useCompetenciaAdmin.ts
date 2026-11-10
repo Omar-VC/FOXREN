@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { competenciasRepository } from "../../../../infrastructure/repositories/competenciasRepository";
 import { partidosRepository } from "../../../../infrastructure/repositories/partidosRepository";
 import { parejasRepository } from "../../../../infrastructure/repositories/parejasRepository";
-import { jugadoresRepository } from "../../../../infrastructure/repositories/jugadoresRepository";
+import { padronRepository } from "../../../../infrastructure/repositories/padronRepository";
 import { zonasRepository } from "../../../../infrastructure/repositories/zonasRepository";
 import { resultadoRepository } from "../../../../infrastructure/repositories/resultadoRepository";
 import { cambiarEstadoCompetencia } from "../../../../application/competencias/cambiarEstadoCompetencia";
@@ -12,7 +12,7 @@ import type { ResultadoPreparacionCompetencia } from "../../../../application/co
 import type { Competencia } from "../../../../domain/competencia/competencia.types";
 import type { Partido } from "../../../../domain/partido/partido.types";
 import type { Pareja } from "../../../../domain/pareja/pareja.types";
-import type { Jugador } from "../../../../domain/jugador/jugador.types";
+import type { JugadorBasico } from "../../../../domain/jugador/jugador.padron";
 import type { Zona } from "../../../../domain/competencia/competencia.zonas.types";
 import type { Resultado } from "../../../../domain/resultado/resultado.types";
 
@@ -22,7 +22,7 @@ interface UseCompetenciaAdminReturn {
   error: string | null;
   partidos: Partido[];
   parejas: Pareja[];
-  jugadores: Jugador[];
+  jugadores: JugadorBasico[];
   zonas: Zona[];
   resultados: Resultado[];
   cargandoPartidos: boolean;
@@ -55,7 +55,7 @@ export function useCompetenciaAdmin(competenciaId: string): UseCompetenciaAdminR
 
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [parejas, setParejas] = useState<Pareja[]>([]);
-  const [jugadores, setJugadores] = useState<Jugador[]>([]);
+  const [jugadores, setJugadores] = useState<JugadorBasico[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [cargandoPartidos, setCargandoPartidos] = useState(true);
@@ -126,7 +126,7 @@ export function useCompetenciaAdmin(competenciaId: string): UseCompetenciaAdminR
             ]),
           ),
         );
-        const jugadoresCargados = await jugadoresRepository.obtenerPorIds(idsJugadores);
+        const jugadoresCargados = await padronRepository.obtenerPorIds(idsJugadores);
 
         if (cancelado) return;
 

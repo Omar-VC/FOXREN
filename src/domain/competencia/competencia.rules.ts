@@ -1,5 +1,5 @@
 import type { Competencia } from "./competencia.types";
-import type { Jugador } from "../jugador/jugador.types";
+import type { JugadorBasico } from "../jugador/jugador.padron";
 import type { Pareja } from "../pareja/pareja.types";
 import { obtenerValorCategoriaJugador } from "../jugador/categoriaJugador";
 import { reglamentoCompetenciaEsValido } from "./competencia.reglamento.rules";
@@ -121,7 +121,7 @@ export function jugadorCumpleReglaCategoria(
 }
 
 export function jugadorPuedeParticiparEnCompetencia(
-  jugador: Jugador,
+  jugador: JugadorBasico,
   competencia: Competencia,
 ): boolean {
   const categoriaJugador = obtenerValorCategoriaJugador(
@@ -136,8 +136,8 @@ export function jugadorPuedeParticiparEnCompetencia(
 }
 
 export function parejaPuedeParticiparEnCompetencia(
-  jugador1: Jugador,
-  jugador2: Jugador,
+  jugador1: JugadorBasico,
+  jugador2: JugadorBasico,
   competencia: Competencia,
 ): boolean {
   const categoriaJugador1 = obtenerValorCategoriaJugador(
@@ -270,7 +270,7 @@ export function validarPreparacionCompetencia(
 export function validarParejasDeCompetencia(
   competencia: Competencia,
   parejas: Pareja[],
-  jugadores: Jugador[],
+  jugadores: JugadorBasico[],
 ): string[] {
   const errores: string[] = [];
 

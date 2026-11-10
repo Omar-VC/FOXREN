@@ -129,6 +129,14 @@ service cloud.firestore {
       allow write: if esSuperadmin();
     }
 
+    match /padron_jugadores/{id} {
+      allow read, write: if esSuperadmin();
+    }
+
+    match /padron_dni/{id} {
+      allow read, write: if esSuperadmin();
+    }
+
     // Todo lo que no figura arriba queda cerrado.
   }
 }

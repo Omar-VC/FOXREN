@@ -1,21 +1,24 @@
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
   documentId,
   getDoc,
   getDocs,
   query,
   runTransaction,
-  updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 import { auth, db } from "../firebase/firebase";
 import { FOXREN_OWNER_UID } from "../firebase/adminIdentity";
 
 import { COLLECTIONS } from "../firebase/collections";
+import { refPadronDni, refPadronJugador } from "./padronRepository";
+import {
+  calcularCodigoDni,
+  construirPadron,
+} from "../../domain/jugador/jugador.padron";
 
 import type {
   ConsentimientoPublicacion,
@@ -121,9 +124,17 @@ export const jugadoresRepository = {
         datos.consentimientoPublicacion?.estado === "revocado") {
       throw new Error("El consentimiento debe gestionarse con las acciones de verificación o retiro.");
     }
-    const docRef = await addDoc(collection(db, COLLECTIONS.jugadores), datos);
+    // El padrón (lo que ven los complejos) se escribe junto con el jugador.
+    const jugadorRef = doc(collection(db, COLLECTIONS.jugadores));
+    const codigoDni = await calcularCodigoDni(datos.dni);
 
-    return docRef.id;
+    const lote = writeBatch(db);
+    lote.set(jugadorRef, datos);
+    lote.set(refPadronJugador(jugadorRef.id), construirPadron(datos));
+    lote.set(refPadronDni(codigoDni), { jugadorId: jugadorRef.id });
+    await lote.commit();
+
+    return jugadorRef.id;
   },
 
   async aprobarDesdeSolicitud(solicitudId: string): Promise<string> {
@@ -197,7 +208,11 @@ export const jugadoresRepository = {
         ),
       };
 
+      const codigoDni = await calcularCodigoDni(jugador.dni);
+
       transaction.set(jugadorRef, jugador);
+      transaction.set(refPadronJugador(jugadorId), construirPadron(jugador));
+      transaction.set(refPadronDni(codigoDni), { jugadorId });
       transaction.update(solicitudRef, {
         estado: "aprobada",
         fechaResolucion: new Date(),
@@ -214,7 +229,22 @@ export const jugadoresRepository = {
     }
     const jugadorRef = doc(db, COLLECTIONS.jugadores, id);
 
-    await updateDoc(jugadorRef, datos);
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(jugadorRef);
+      if (!snapshot.exists()) throw new Error("No se encontró el jugador.");
+
+      const anterior = snapshot.data() as Omit<Jugador, "id">;
+      const actualizado = { ...anterior, ...datos } as Omit<Jugador, "id">;
+      const codigoNuevo = await calcularCodigoDni(actualizado.dni);
+      const codigoAnterior = await calcularCodigoDni(anterior.dni);
+
+      transaction.update(jugadorRef, { ...datos });
+      transaction.set(refPadronJugador(id), construirPadron(actualizado));
+      if (codigoAnterior !== codigoNuevo) {
+        transaction.delete(refPadronDni(codigoAnterior));
+      }
+      transaction.set(refPadronDni(codigoNuevo), { jugadorId: id });
+    });
   },
 
   async verificarConsentimientoPublicacion(
@@ -293,6 +323,14 @@ export const jugadoresRepository = {
   async eliminarJugador(id: string): Promise<void> {
     const jugadorRef = doc(db, COLLECTIONS.jugadores, id);
 
-    await deleteDoc(jugadorRef);
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(jugadorRef);
+      if (snapshot.exists()) {
+        const dni = (snapshot.data() as Omit<Jugador, "id">).dni;
+        transaction.delete(refPadronDni(await calcularCodigoDni(dni)));
+      }
+      transaction.delete(refPadronJugador(id));
+      transaction.delete(jugadorRef);
+    });
   },
 };
