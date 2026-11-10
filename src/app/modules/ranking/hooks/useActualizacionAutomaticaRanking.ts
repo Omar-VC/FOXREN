@@ -28,8 +28,9 @@ function guardarUltima(valor: number) {
  * Solo debe montarse dentro del área protegida del superadmin: el cálculo lee
  * datos privados de jugadores.
  */
-export function useActualizacionAutomaticaRanking() {
+export function useActualizacionAutomaticaRanking(habilitado = true) {
   useEffect(() => {
+    if (!habilitado) return;
     const ahora = Date.now();
     if (ahora - leerUltima() < INTERVALO_MS) return;
 
@@ -39,5 +40,5 @@ export function useActualizacionAutomaticaRanking() {
       guardarUltima(0);
       console.error("No se pudo actualizar el ranking público:", error);
     });
-  }, []);
+  }, [habilitado]);
 }

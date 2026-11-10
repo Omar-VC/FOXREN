@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { authRepository } from "../../../infrastructure/repositories/authRepository";
 import { useActualizacionAutomaticaRanking } from "../../modules/ranking/hooks/useActualizacionAutomaticaRanking";
+import { useSesionAdmin } from "./SesionAdminContext";
+import { RUTAS_COMPLEJO } from "../../../domain/usuario/usuario.acceso";
 
 // Definimos los elementos con componentes SVG personalizados para un look pro
 const navItems = [
@@ -182,7 +184,12 @@ const navItems = [
 export default function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  useActualizacionAutomaticaRanking();
+  const sesion = useSesionAdmin();
+  useActualizacionAutomaticaRanking(sesion.rol === "superadmin");
+  const itemsVisibles =
+    sesion.rol === "superadmin"
+      ? navItems
+      : navItems.filter((item) => RUTAS_COMPLEJO.includes(item.to));
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -262,7 +269,7 @@ export default function AdminLayout() {
 
           {/* Menú Desktop (Limpio, con iconos sutiles o solo texto profesional) */}
           <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => {
+            {itemsVisibles.map((item) => {
               const isActive = item.end
                 ? location.pathname === item.to
                 : location.pathname.startsWith(item.to);
@@ -340,7 +347,7 @@ export default function AdminLayout() {
           </div>
 
           <nav className="flex flex-col gap-1">
-            {navItems.map((item) => {
+            {itemsVisibles.map((item) => {
               const isActive = item.end
                 ? location.pathname === item.to
                 : location.pathname.startsWith(item.to);

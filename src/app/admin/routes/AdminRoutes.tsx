@@ -2,11 +2,12 @@ import { Routes, Route } from "react-router-dom";
 import AdminLoginPage from "../pages/AdminLoginPage";
 import AdminLayout from "../components/AdminLayout";
 import AdminGuard from "../components/AdminGuard";
+import { InicioSegunRol, SoloSuperadmin } from "../components/RutasPorRol";
 import AdminInicioPage from "../pages/AdminInicioPage";
 import AdminCircuitosPage from "../../modules/circuitos/pages/AdminCircuitosPage";
 import AdminComplejosPage from "../../modules/complejos/pages/AdminComplejosPage";
 import AdminTorneosPage from "../../modules/torneos/pages/AdminTorneosPage";
-import AdminTorneoDetallePage from "../../modules/torneos/pages/AdminTorneoDetallePage"; // <-- Nombre claro y sin ambigüedades
+import AdminTorneoDetallePage from "../../modules/torneos/pages/AdminTorneoDetallePage";
 import AdminCategoriasPage from "../../modules/categorias/pages/AdminCategoriasPage";
 import AdminSolicitudesRegistroPage from "../../modules/unirse/pages/AdminSolicitudesRegistroPage";
 import AdminJugadoresPage from "../../modules/jugadores/pages/AdminJugadoresPage";
@@ -27,25 +28,31 @@ export default function AdminRoutes() {
           </AdminGuard>
         }
       >
-        <Route path="/" element={<AdminInicioPage />} />
-        <Route path="/circuitos" element={<AdminCircuitosPage />} />
-        <Route path="/torneos" element={<AdminTorneosPage />} />
+        {/* Compartidas: superadmin y admin de complejo */}
         <Route
-          path="/torneos/:torneoId"
-          element={<AdminTorneoDetallePage />}
-        />{" "}
-        {/* <-- Ruta específica del torneo */}
+          path="/"
+          element={
+            <InicioSegunRol>
+              <AdminInicioPage />
+            </InicioSegunRol>
+          }
+        />
+        <Route path="/torneos" element={<AdminTorneosPage />} />
+        <Route path="/torneos/:torneoId" element={<AdminTorneoDetallePage />} />
         <Route
           path="/torneos/:torneoId/competencias/:competenciaId"
           element={<CompetenciaAdminPage />}
         />
-        <Route path="/jugadores" element={<AdminJugadoresPage />} />
-        <Route path="/jugadores/:id" element={<AdminJugadorDetallePage />} />
-        <Route path="/ranking" element={<AdminRankingPage />} />
-        <Route path="/complejos" element={<AdminComplejosPage />} />
-        <Route path="/categorias" element={<AdminCategoriasPage />} />
         <Route path="/organizadores" element={<AdminOrganizadoresPage />} />
-        <Route path="/solicitudes" element={<AdminSolicitudesRegistroPage />} />
+
+        {/* Solo superadmin */}
+        <Route path="/circuitos" element={<SoloSuperadmin><AdminCircuitosPage /></SoloSuperadmin>} />
+        <Route path="/jugadores" element={<SoloSuperadmin><AdminJugadoresPage /></SoloSuperadmin>} />
+        <Route path="/jugadores/:id" element={<SoloSuperadmin><AdminJugadorDetallePage /></SoloSuperadmin>} />
+        <Route path="/ranking" element={<SoloSuperadmin><AdminRankingPage /></SoloSuperadmin>} />
+        <Route path="/complejos" element={<SoloSuperadmin><AdminComplejosPage /></SoloSuperadmin>} />
+        <Route path="/categorias" element={<SoloSuperadmin><AdminCategoriasPage /></SoloSuperadmin>} />
+        <Route path="/solicitudes" element={<SoloSuperadmin><AdminSolicitudesRegistroPage /></SoloSuperadmin>} />
       </Route>
     </Routes>
   );

@@ -33,6 +33,7 @@ export const COLLECTIONS = {
   historialPublico: "historial_publico",
   padronJugadores: "padron_jugadores",
   padronDni: "padron_dni",
+  usuarios: "usuarios",
 } as const;
 
 export const ZONAS_COLLECTION = COLLECTIONS.zonas;

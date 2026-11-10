@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Organizador } from "../../../../domain/organizador/organizador.types";
 import { organizadorEsValido } from "../../../../domain/organizador/organizador.rules";
 import { organizadoresRepository } from "../../../../infrastructure/repositories/organizadoresRepository";
+import { useSesionAdmin } from "../../../admin/components/SesionAdminContext";
 
 const CLASE_INPUT =
   "w-full rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs text-white placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-colors";
@@ -13,17 +14,17 @@ export default function AdminOrganizadoresPage() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const sesion = useSesionAdmin();
   const cargar = useCallback(async () => {
     try {
-      setOrganizadores(await organizadoresRepository.obtenerOrganizadores());
+      setOrganizadores(await organizadoresRepository.obtenerOrganizadores(sesion.complejoId));
       setError(null);
     } catch {
       setError("No se pudieron cargar los organizadores.");
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [sesion.complejoId]);
 
   useEffect(() => {
     void Promise.resolve().then(cargar);
@@ -31,7 +32,7 @@ export default function AdminOrganizadoresPage() {
 
   async function crear(event: React.FormEvent) {
     event.preventDefault();
-    const datos = { nombre, contactoPublico: contactoPublico || undefined, activo: true };
+    const datos = { nombre, contactoPublico: contactoPublico || undefined, activo: true, ...(sesion.complejoId ? { complejoId: sesion.complejoId } : {}) };
     if (!organizadorEsValido(datos)) {
       setError("Ingresá el nombre del organizador.");
       return;

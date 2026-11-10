@@ -137,6 +137,13 @@ service cloud.firestore {
       allow read, write: if esSuperadmin();
     }
 
+        // Cuentas de acceso al panel: cada usuario lee solo su propio documento.
+    match /usuarios/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || esSuperadmin());
+      allow write: if esSuperadmin();
+    }
+
     // Todo lo que no figura arriba queda cerrado.
   }
 }

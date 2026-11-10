@@ -1,12 +1,28 @@
-import { addDoc, collection, doc, getDoc, getDocs, Timestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  Timestamp,
+  where,
+} from "firebase/firestore";
 
 import type { Organizador } from "../../domain/organizador/organizador.types";
 import { db } from "../firebase/firebase";
 import { COLLECTIONS } from "../firebase/collections";
 
 export const organizadoresRepository = {
-  async obtenerOrganizadores(): Promise<Organizador[]> {
-    const snapshot = await getDocs(collection(db, COLLECTIONS.organizadores));
+  /**
+   * Con `complejoId` trae solo los organizadores de ese complejo (lo que usa el
+   * admin de complejo). Sin él, trae todos (superadmin).
+   */
+  async obtenerOrganizadores(complejoId?: string): Promise<Organizador[]> {
+    const referencia = collection(db, COLLECTIONS.organizadores);
+    const snapshot = await getDocs(
+      complejoId ? query(referencia, where("complejoId", "==", complejoId)) : referencia,
+    );
     return snapshot.docs.map((item) => ({
       id: item.id,
       ...item.data(),

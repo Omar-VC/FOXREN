@@ -1,6 +1,7 @@
 import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 
-import { db } from "../../infrastructure/firebase/firebase";
+import { auth, db } from "../../infrastructure/firebase/firebase";
+import { FOXREN_OWNER_UID } from "../../infrastructure/firebase/adminIdentity";
 import { COLLECTIONS } from "../../infrastructure/firebase/collections";
 import { circuitosRepository } from "../../infrastructure/repositories/circuitosRepository";
 import { torneosRepository } from "../../infrastructure/repositories/torneosRepository";
@@ -244,6 +245,9 @@ export async function actualizarTodosLosRankings(): Promise<ResultadoRankingCirc
 export async function actualizarRankingsDeCompetencia(
   competenciaId: string,
 ): Promise<ResumenRanking | null> {
+  // El cálculo lee datos privados de jugadores: solo lo corre el superadmin.
+  if (auth.currentUser?.uid !== FOXREN_OWNER_UID) return null;
+
   const competencia = await competenciasRepository.obtenerPorId(competenciaId);
   if (!competencia) return null;
 
