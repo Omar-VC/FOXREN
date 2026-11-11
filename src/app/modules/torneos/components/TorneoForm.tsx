@@ -7,6 +7,12 @@ import OrganizadorSelector from "../../../shared/OrganizadorSelector";
 interface Props {
   creando: boolean;
 
+  /**
+   * Admin de complejo: el torneo se crea siempre en este complejo (bloqueado).
+   * El circuito arranca con el de su complejo pero puede elegir otro.
+   */
+  complejoFijoId?: string;
+
   onCrear: (datos: {
     nombre: string;
     circuitoId: string;
@@ -21,6 +27,7 @@ interface Props {
 
 export default function TorneoForm({
   creando,
+  complejoFijoId,
   onCrear,
 }: Props) {
   const {
@@ -40,6 +47,16 @@ export default function TorneoForm({
   const [fechaFin, setFechaFin] = useState("");
   const [organizadorIds, setOrganizadorIds] = useState<string[]>([]);
 
+  const complejoFijo = complejoFijoId
+    ? complejos.find((complejo) => complejo.id === complejoFijoId)
+    : undefined;
+  const esComplejoFijo = Boolean(complejoFijoId);
+
+  // Para el admin de complejo, el circuito de su complejo es el valor por defecto.
+  const circuitoEfectivo =
+    circuitoId || (esComplejoFijo ? complejoFijo?.circuitoId ?? "" : "");
+  const complejoEfectivo = complejoFijoId ?? complejoId;
+
   const complejosDisponibles = complejos.filter(
     (complejo) =>
       complejo.circuitoId === circuitoId &&
@@ -53,8 +70,8 @@ export default function TorneoForm({
 
     await onCrear({
       nombre,
-      circuitoId,
-      complejoId,
+      circuitoId: circuitoEfectivo,
+      complejoId: complejoEfectivo,
       fechaInicio: new Date(fechaInicio),
       fechaFin: fechaFin
         ? new Date(fechaFin)
@@ -83,7 +100,7 @@ export default function TorneoForm({
         <label>Circuito</label>
 
         <select
-          value={circuitoId}
+          value={circuitoEfectivo}
           onChange={(event) => {
             setCircuitoId(event.target.value);
             setComplejoId("");
@@ -113,40 +130,56 @@ export default function TorneoForm({
         </select>
       </div>
 
-      <div>
-        <label>Complejo</label>
+      {esComplejoFijo ? (
+        <div>
+          <label>Complejo</label>
+          <input
+            value={
+              cargandoComplejos
+                ? "Cargando..."
+                : complejoFijo?.nombre ??
+                  "No se encontró tu complejo. Avisá al administrador de FOXREN."
+            }
+            disabled
+            readOnly
+          />
+        </div>
+      ) : (
+        <div>
+          <label>Complejo</label>
 
-        <select
-          value={complejoId}
-          onChange={(event) =>
-            setComplejoId(event.target.value)
-          }
-          required
-          disabled={
-            !circuitoId ||
-            cargandoComplejos
-          }
-        >
-          <option value="">
-            {!circuitoId
-              ? "Seleccioná primero un circuito"
-              : cargandoComplejos
-                ? "Cargando complejos..."
-                : "Seleccionar complejo"}
-          </option>
+          <select
+            value={complejoId}
+            onChange={(event) =>
+              setComplejoId(event.target.value)
+            }
+            required
+            disabled={
+              !circuitoId ||
+              cargandoComplejos
+            }
+          >
+            <option value="">
+              {!circuitoId
+                ? "Seleccioná primero un circuito"
+                : cargandoComplejos
+                  ? "Cargando complejos..."
+                  : "Seleccionar complejo"}
+            </option>
 
-          {complejosDisponibles.map(
-            (complejo) => (
-              <option
-                key={complejo.id}
-                value={complejo.id}
-              >
-                {complejo.nombre}
-              </option>
-            )
-          )}
-        </select>
-      </div>
+            {complejosDisponibles.map(
+              (complejo) => (
+                <option
+                  key={complejo.id}
+                  value={complejo.id}
+                >
+                  {complejo.nombre}
+                </option>
+              )
+            )}
+          </select>
+        </div>
+      )}
 
       <div>
         <label>Fecha de inicio</label>
@@ -177,7 +210,7 @@ export default function TorneoForm({
 
       <button
         type="submit"
-        disabled={creando}
+        disabled={creando || !circuitoEfectivo || (esComplejoFijo && !complejoFijo)}
       >
         {creando
           ? "Creando..."

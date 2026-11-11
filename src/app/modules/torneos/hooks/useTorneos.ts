@@ -4,7 +4,8 @@ import { torneosRepository } from "../../../../infrastructure/repositories/torne
 
 import type { Torneo } from "../../../../domain/torneo/torneo.types";
 
-export function useTorneos() {
+/** Con `complejoId` carga solo los torneos de ese complejo; sin él, todos. */
+export function useTorneos(complejoId?: string) {
   const [torneos, setTorneos] = useState<Torneo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [creando, setCreando] = useState(false);
@@ -16,7 +17,7 @@ export function useTorneos() {
       setError(null);
 
       const datos =
-        await torneosRepository.obtenerTorneos();
+        await torneosRepository.obtenerTorneos(complejoId);
 
       setTorneos(datos);
     } catch {
@@ -24,7 +25,7 @@ export function useTorneos() {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [complejoId]);
 
   async function crearTorneo(
     datos: Omit<Torneo, "id" | "fechaCreacion">

@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import TorneoForm from "../components/TorneoForm";
 import { useTorneos } from "../hooks/useTorneos";
+import { useSesionAdmin } from "../../../admin/components/SesionAdminContext";
 
 export default function AdminTorneosPage() {
-  const { torneos, cargando, creando, error, crearTorneo } = useTorneos();
+  const sesion = useSesionAdmin();
+  const { torneos, cargando, error, crearTorneo, creando } = useTorneos(sesion.complejoId);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   if (cargando) {
@@ -46,7 +48,7 @@ export default function AdminTorneosPage() {
               Registrar Nuevo Torneo
             </h2>
           </div>
-          <TorneoForm
+          <TorneoForm complejoFijoId={sesion.complejoId}
             creando={creando}
             onCrear={async (datos) => {
               await crearTorneo(datos);

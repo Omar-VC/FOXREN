@@ -15,8 +15,17 @@ import { COLLECTIONS } from "../firebase/collections";
 import type { Torneo } from "../../domain/torneo/torneo.types";
 
 export const torneosRepository = {
-  async obtenerTorneos(): Promise<Torneo[]> {
-    const snap = await getDocs(collection(db, COLLECTIONS.torneos));
+  /**
+   * Con `complejoId` trae solo los torneos de ese complejo (admin de complejo).
+   * Sin él, trae todos (superadmin).
+   */
+  async obtenerTorneos(complejoId?: string): Promise<Torneo[]> {
+    const referencia = collection(db, COLLECTIONS.torneos);
+    const snap = await getDocs(
+      complejoId
+        ? query(referencia, where("complejoId", "==", complejoId))
+        : referencia,
+    );
 
     return snap.docs.map((docSnap) => ({
       id: docSnap.id,

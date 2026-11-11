@@ -16,6 +16,43 @@ service cloud.firestore {
         && request.auth.uid == "BF0KyHXXTAOOOw74ztc0clvg1XN2";
     }
 
+    // Admin de complejo: tiene un documento usuarios/{uid} con rol "complejo",
+    // activo y con su complejoId. El documento lo crea solo el superadmin.
+    function perfilUsuario() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function esComplejoActivo() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && perfilUsuario().rol == "complejo"
+        && perfilUsuario().activo == true
+        && perfilUsuario().complejoId is string;
+    }
+
+    function esComplejoDe(complejoId) {
+      return esComplejoActivo() && perfilUsuario().complejoId == complejoId;
+    }
+
+    function complejoDeTorneo(torneoId) {
+      return get(/databases/$(database)/documents/torneos/$(torneoId)).data.complejoId;
+    }
+
+    // Superadmin, o el admin del complejo dueño del torneo.
+    function puedeGestionarTorneo(torneoId) {
+      return esSuperadmin() || esComplejoDe(complejoDeTorneo(torneoId));
+    }
+
+    // ---------------------------------------------------------------------
+    // Cuentas de acceso al panel: cada usuario lee solo su propio documento.
+    // ---------------------------------------------------------------------
+
+    match /usuarios/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || esSuperadmin());
+      allow write: if esSuperadmin();
+    }
+
     // ---------------------------------------------------------------------
     // Datos PRIVADOS: solo el superadmin
     // (jugadores con DNI y fecha de nacimiento, inscripciones, historial, etc.)
@@ -77,16 +114,6 @@ service cloud.firestore {
       allow write: if esSuperadmin();
     }
 
-    match /torneos/{id} {
-      allow read: if true;
-      allow write: if esSuperadmin();
-    }
-
-    match /competencias/{id} {
-      allow read: if true;
-      allow write: if esSuperadmin();
-    }
-
     match /categorias/{id} {
       allow read: if true;
       allow write: if esSuperadmin();
@@ -129,19 +156,47 @@ service cloud.firestore {
       allow write: if esSuperadmin();
     }
 
+    // ---------------------------------------------------------------------
+    // Gestionados también por el admin de SU complejo.
+    // ---------------------------------------------------------------------
+
+    match /torneos/{id} {
+      allow read: if true;
+
+      allow create: if esSuperadmin()
+        || esComplejoDe(request.resource.data.complejoId);
+
+      // Un complejo edita solo sus torneos y no puede pasarlos a otro complejo.
+      allow update: if esSuperadmin()
+        || (
+          esComplejoDe(resource.data.complejoId)
+          && request.resource.data.complejoId == resource.data.complejoId
+        );
+
+      allow delete: if esSuperadmin();
+    }
+
+    match /competencias/{id} {
+      allow read: if true;
+
+      allow create: if puedeGestionarTorneo(request.resource.data.torneoId);
+
+      allow update: if puedeGestionarTorneo(resource.data.torneoId)
+        && request.resource.data.torneoId == resource.data.torneoId;
+
+      allow delete: if esSuperadmin();
+    }
+
+    // Padrón sin datos sensibles: el complejo lo lee para inscribir parejas.
+    // El índice por DNI solo se consulta de a un documento (no se puede listar).
     match /padron_jugadores/{id} {
-      allow read, write: if esSuperadmin();
+      allow read: if esSuperadmin() || esComplejoActivo();
+      allow create, update, delete: if esSuperadmin();
     }
 
     match /padron_dni/{id} {
-      allow read, write: if esSuperadmin();
-    }
-
-        // Cuentas de acceso al panel: cada usuario lee solo su propio documento.
-    match /usuarios/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || esSuperadmin());
-      allow write: if esSuperadmin();
+      allow get: if esSuperadmin() || esComplejoActivo();
+      allow list, create, update, delete: if esSuperadmin();
     }
 
     // Todo lo que no figura arriba queda cerrado.
