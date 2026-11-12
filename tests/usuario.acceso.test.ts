@@ -30,3 +30,18 @@ test("sin documento, inactiva o sin complejoId no hay acceso", () => {
 test("un documento no puede otorgar rol superadmin a otra cuenta", () => {
   assert.equal(resolverAcceso("u1", OWNER, { rol: "superadmin", activo: true }), null);
 });
+
+import { validarNuevoAcceso, passwordDesdeBytes } from "../src/domain/usuario/usuario.acceso.ts";
+
+test("nuevo acceso: exige email válido y contraseña de 8 o más caracteres", () => {
+  assert.equal(validarNuevoAcceso("ivan@padelzone.com", "abcd2345"), null);
+  assert.match(validarNuevoAcceso("ivan", "abcd2345") ?? "", /email/i);
+  assert.match(validarNuevoAcceso("ivan@padelzone.com", "corta") ?? "", /8 caracteres/);
+});
+
+test("contraseña generada: largo pedido, solo caracteres legibles", () => {
+  const bytes = Array.from({ length: 12 }, (_, i) => i * 37);
+  const password = passwordDesdeBytes(bytes);
+  assert.equal(password.length, 12);
+  assert.match(password, /^[A-HJ-NP-Za-km-z2-9]+$/);
+});

@@ -1,4 +1,5 @@
 import type { Complejo } from "../../../../domain/complejo/complejo.types";
+import AccesoComplejo from "./AccesoComplejo";
 
 interface Props {
   complejos: Complejo[];
@@ -57,6 +58,8 @@ export default function ComplejoList({ complejos }: Props) {
                 🎾 Canchas: <strong className="text-slate-200 font-semibold">{complejo.cantidadCanchas}</strong>
               </span>
             </div>
+
+            <AccesoComplejo complejoId={complejo.id} />
           </article>
         ))}
       </div>

@@ -4,6 +4,7 @@ import { authRepository } from "../../../infrastructure/repositories/authReposit
 import { useActualizacionAutomaticaRanking } from "../../modules/ranking/hooks/useActualizacionAutomaticaRanking";
 import { useSesionAdmin } from "./SesionAdminContext";
 import { RUTAS_COMPLEJO } from "../../../domain/usuario/usuario.acceso";
+import BotonCambiarPassword from "./BotonCambiarPassword";
 
 // Definimos los elementos con componentes SVG personalizados para un look pro
 const navItems = [
@@ -289,7 +290,7 @@ export default function AdminLayout() {
                 </NavLink>
               );
             })}
-
+            <BotonCambiarPassword />
             <button
               onClick={cerrarSesion}
               className="ml-3 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 text-xs font-bold transition-colors"
@@ -374,6 +375,7 @@ export default function AdminLayout() {
         </div>
 
         <div className="p-5 border-t border-[var(--color-border)] bg-black/20">
+          <BotonCambiarPassword className="w-full mb-2 py-3 rounded-xl border border-white/10 text-slate-300 text-xs font-bold" />
           <button
             onClick={() => {
               setMenuOpen(false);
