@@ -5,7 +5,7 @@ import {
 
 import { competenciasRepository } from "../../infrastructure/repositories/competenciasRepository";
 import { parejasRepository } from "../../infrastructure/repositories/parejasRepository";
-import { jugadoresRepository } from "../../infrastructure/repositories/jugadoresRepository";
+import { padronRepository } from "../../infrastructure/repositories/padronRepository";
 
 export interface ResultadoPreparacionCompetencia {
   esValida: boolean;
@@ -16,9 +16,9 @@ export interface ResultadoPreparacionCompetencia {
     jugadores: number;
   };
   parejas: {
-  jugador1: string;
-  jugador2: string;
-}[];
+    jugador1: string;
+    jugador2: string;
+  }[];
 }
 
 export async function prepararCompetencia(
@@ -53,24 +53,24 @@ export async function prepararCompetencia(
   const idsJugadores = [...new Set(
     parejasActivas.flatMap((pareja) => [pareja.jugador1Id, pareja.jugador2Id]),
   )];
-  const jugadores = await jugadoresRepository.obtenerPorIds(idsJugadores);
+  // Se lee el padrón (sin datos sensibles) y no la ficha completa del jugador:
+  // así también lo puede verificar el administrador de un complejo.
+  const jugadores = await padronRepository.obtenerPorIds(idsJugadores);
   const jugadoresPorId = new Map(jugadores.map((jugador) => [jugador.id, jugador]));
 
-const parejasInforme = parejasActivas.map((pareja) => {
-  const jugador1 = jugadoresPorId.get(pareja.jugador1Id);
-  const jugador2 = jugadoresPorId.get(pareja.jugador2Id);
+  const parejasInforme = parejasActivas.map((pareja) => {
+    const jugador1 = jugadoresPorId.get(pareja.jugador1Id);
+    const jugador2 = jugadoresPorId.get(pareja.jugador2Id);
 
-  return {
-    jugador1: jugador1
-      ? `${jugador1.nombre} ${jugador1.apellido}`
-      : pareja.jugador1Id,
-    jugador2: jugador2
-      ? `${jugador2.nombre} ${jugador2.apellido}`
-      : pareja.jugador2Id,
-  };
-});
-
-  
+    return {
+      jugador1: jugador1
+        ? `${jugador1.nombre} ${jugador1.apellido}`
+        : pareja.jugador1Id,
+      jugador2: jugador2
+        ? `${jugador2.nombre} ${jugador2.apellido}`
+        : pareja.jugador2Id,
+    };
+  });
 
   const erroresParejas = validarParejasDeCompetencia(
     competencia,
@@ -80,25 +80,25 @@ const parejasInforme = parejasActivas.map((pareja) => {
 
   if (erroresParejas.length > 0) {
     return {
-  esValida: false,
-  errores: erroresParejas,
-  resumen: {
-    cantidadParejas: parejasActivas.length,
-    cupoMaximo: competencia.cupoMaximoParejas,
-    jugadores: idsJugadores.length,
-  },
-  parejas: parejasInforme,
-};
+      esValida: false,
+      errores: erroresParejas,
+      resumen: {
+        cantidadParejas: parejasActivas.length,
+        cupoMaximo: competencia.cupoMaximoParejas,
+        jugadores: idsJugadores.length,
+      },
+      parejas: parejasInforme,
+    };
   }
 
   return {
-  esValida: true,
-  errores: [],
-  resumen: {
-    cantidadParejas: parejasActivas.length,
-    cupoMaximo: competencia.cupoMaximoParejas,
-  jugadores: idsJugadores.length,
-  },
-  parejas: parejasInforme,
-};
+    esValida: true,
+    errores: [],
+    resumen: {
+      cantidadParejas: parejasActivas.length,
+      cupoMaximo: competencia.cupoMaximoParejas,
+      jugadores: idsJugadores.length,
+    },
+    parejas: parejasInforme,
+  };
 }

@@ -70,8 +70,12 @@ export const torneosRepository = {
   async crearTorneo(
     datos: Omit<Torneo, "id" | "fechaCreacion">,
   ): Promise<string> {
+    // Firestore no acepta valores undefined (por ejemplo, una fecha de fin vacía).
+    const sinVacios = Object.fromEntries(
+      Object.entries(datos).filter(([, valor]) => valor !== undefined),
+    );
     const nuevoTorneo = {
-      ...datos,
+      ...sinVacios,
       estado: datos.estado ?? "pendiente",
       fechaCreacion: Timestamp.now(),
     };

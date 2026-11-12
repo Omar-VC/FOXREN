@@ -43,6 +43,12 @@ service cloud.firestore {
       return esSuperadmin() || esComplejoDe(complejoDeTorneo(torneoId));
     }
 
+    function puedeGestionarCompetencia(competenciaId) {
+      return puedeGestionarTorneo(
+        get(/databases/$(database)/documents/competencias/$(competenciaId)).data.torneoId
+      );
+    }
+
     // ---------------------------------------------------------------------
     // Cuentas de acceso al panel: cada usuario lee solo su propio documento.
     // ---------------------------------------------------------------------
@@ -63,14 +69,6 @@ service cloud.firestore {
     }
 
     match /inscripciones/{id} {
-      allow read, write: if esSuperadmin();
-    }
-
-    match /reservas_competencia/{id} {
-      allow read, write: if esSuperadmin();
-    }
-
-    match /historial/{id} {
       allow read, write: if esSuperadmin();
     }
 
@@ -120,31 +118,6 @@ service cloud.firestore {
     }
 
     // Solo nombre, contacto público y estado.
-    match /organizadores/{id} {
-      allow read: if true;
-      allow write: if esSuperadmin();
-    }
-
-    match /zonas/{id} {
-      allow read: if true;
-      allow write: if esSuperadmin();
-    }
-
-    match /parejas/{id} {
-      allow read: if true;
-      allow write: if esSuperadmin();
-    }
-
-    match /partidos/{id} {
-      allow read: if true;
-      allow write: if esSuperadmin();
-    }
-
-    match /resultados/{id} {
-      allow read: if true;
-      allow write: if esSuperadmin();
-    }
-
     // Proyecciones públicas generadas por el sistema: solo campos públicos.
     match /rankings_publicos/{id} {
       allow read: if true;
@@ -159,6 +132,75 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
     // Gestionados también por el admin de SU complejo.
     // ---------------------------------------------------------------------
+
+    // Contacto público del organizador. Cada complejo maneja los suyos.
+    match /organizadores/{id} {
+      allow read: if true;
+
+      allow create: if esSuperadmin()
+        || esComplejoDe(request.resource.data.complejoId);
+
+      allow update: if esSuperadmin()
+        || (
+          esComplejoDe(resource.data.complejoId)
+          && request.resource.data.complejoId == resource.data.complejoId
+        );
+
+      allow delete: if esSuperadmin();
+    }
+
+    // Zonas, parejas y partidos cuelgan de una competencia (campo competenciaId).
+    match /zonas/{id} {
+      allow read: if true;
+      allow create: if puedeGestionarCompetencia(request.resource.data.competenciaId);
+      allow update: if puedeGestionarCompetencia(resource.data.competenciaId)
+        && request.resource.data.competenciaId == resource.data.competenciaId;
+      allow delete: if esSuperadmin();
+    }
+
+    match /parejas/{id} {
+      allow read: if true;
+      allow create: if puedeGestionarCompetencia(request.resource.data.competenciaId);
+      allow update: if puedeGestionarCompetencia(resource.data.competenciaId)
+        && request.resource.data.competenciaId == resource.data.competenciaId;
+      allow delete: if esSuperadmin();
+    }
+
+    match /partidos/{id} {
+      allow read: if true;
+      allow create: if puedeGestionarCompetencia(request.resource.data.competenciaId);
+      allow update: if puedeGestionarCompetencia(resource.data.competenciaId)
+        && request.resource.data.competenciaId == resource.data.competenciaId;
+      allow delete: if esSuperadmin();
+    }
+
+    // El resultado usa el mismo ID que su partido.
+    match /resultados/{partidoId} {
+      allow read: if true;
+      allow create, update: if esSuperadmin()
+        || puedeGestionarCompetencia(
+          get(/databases/$(database)/documents/partidos/$(partidoId)).data.competenciaId
+        );
+      allow delete: if esSuperadmin();
+    }
+
+    // Reservas de jugador por competencia (evitan inscribir dos veces al mismo
+    // jugador). El complejo las consulta de a una y las maneja en sus competencias.
+    match /reservas_competencia/{id} {
+      allow get: if esSuperadmin() || esComplejoActivo();
+      allow list: if esSuperadmin();
+      allow create: if puedeGestionarCompetencia(request.resource.data.competenciaId);
+      allow update: if puedeGestionarCompetencia(resource.data.competenciaId)
+        && request.resource.data.competenciaId == resource.data.competenciaId;
+      allow delete: if puedeGestionarCompetencia(resource.data.competenciaId);
+    }
+
+    // Historial de jugadores: el complejo solo lo ESCRIBE al cargar un resultado;
+    // no puede leerlo (tiene IDs de jugadores).
+    match /historial/{id} {
+      allow read, update, delete: if esSuperadmin();
+      allow create: if puedeGestionarCompetencia(request.resource.data.competenciaId);
+    }
 
     match /torneos/{id} {
       allow read: if true;

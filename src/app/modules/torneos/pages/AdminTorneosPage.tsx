@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import TorneoForm from "../components/TorneoForm";
 import { useTorneos } from "../hooks/useTorneos";
 import { useSesionAdmin } from "../../../admin/components/SesionAdminContext";
+import BotonEliminar from "../../../shared/BotonEliminar";
 
 export default function AdminTorneosPage() {
   const sesion = useSesionAdmin();
-  const { torneos, cargando, error, crearTorneo, creando } = useTorneos(sesion.complejoId);
+  const { torneos, cargando, creando, error, crearTorneo, eliminarTorneo } =
+    useTorneos(sesion.complejoId);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   if (cargando) {
@@ -48,8 +50,9 @@ export default function AdminTorneosPage() {
               Registrar Nuevo Torneo
             </h2>
           </div>
-          <TorneoForm complejoFijoId={sesion.complejoId}
+          <TorneoForm
             creando={creando}
+            complejoFijoId={sesion.complejoId}
             onCrear={async (datos) => {
               await crearTorneo(datos);
               setMostrarFormulario(false);
@@ -127,6 +130,15 @@ export default function AdminTorneosPage() {
                       Administrar Competencias →
                     </Link>
                   </div>
+
+                  {sesion.rol === "superadmin" && (
+                    <BotonEliminar
+                      nombre={torneo.nombre}
+                      advertencia="Se elimina el torneo con todas sus competencias, parejas, partidos y resultados. No se puede deshacer."
+                      onConfirmar={() => eliminarTorneo(torneo.id)}
+                      etiqueta="Eliminar torneo"
+                    />
+                  )}
                 </article>
               );
             })}

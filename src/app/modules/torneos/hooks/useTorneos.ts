@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { torneosRepository } from "../../../../infrastructure/repositories/torneosRepository";
+import { eliminarTorneoCompleto } from "../../../../application/eliminacion/eliminarEntidades";
+import { actualizarTodosLosRankings } from "../../../../application/ranking/actualizarRankingsCircuito";
 
 import type { Torneo } from "../../../../domain/torneo/torneo.types";
 
@@ -45,6 +47,15 @@ export function useTorneos(complejoId?: string) {
     }
   }
 
+  /** Solo superadmin. Borra el torneo con sus competencias y recalcula el ranking. */
+  async function eliminarTorneo(torneoId: string) {
+    await eliminarTorneoCompleto(torneoId);
+    await cargarTorneos();
+    void actualizarTodosLosRankings().catch((causa) =>
+      console.error("No se pudo recalcular el ranking tras eliminar:", causa),
+    );
+  }
+
   useEffect(() => {
     void Promise.resolve().then(cargarTorneos);
   }, [cargarTorneos]);
@@ -55,5 +66,6 @@ export function useTorneos(complejoId?: string) {
     creando,
     error,
     crearTorneo,
+    eliminarTorneo,
   };
 }
