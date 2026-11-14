@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { solicitudesRegistroRepository } from "../../../../infrastructure/repositories/solicitudesRegistroRepository";
 import { CATEGORIAS_DECLARABLES } from "../../../../domain/jugador/categoriaJugador";
+import {
+  PROVINCIAS,
+  buscarCoincidencia,
+  formatearNombreLugar,
+} from "../../../../domain/ubicacion/ubicacion";
+import { obtenerLocalidades } from "../../../../infrastructure/georef/georefApi";
 
 export default function SolicitudRegistroForm() {
   const [nombre, setNombre] = useState("");
@@ -21,8 +27,67 @@ export default function SolicitudRegistroForm() {
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
 
+  const [localidades, setLocalidades] = useState<string[]>([]);
+  const [cargandoLocalidades, setCargandoLocalidades] = useState(false);
+  const [listaNoDisponible, setListaNoDisponible] = useState(false);
+
+  // Al elegir provincia se carga la lista oficial de sus ciudades.
+  useEffect(() => {
+    let vigente = true;
+    void Promise.resolve().then(async () => {
+      if (!provincia) {
+        setLocalidades([]);
+        setListaNoDisponible(false);
+        return;
+      }
+      setCargandoLocalidades(true);
+      setListaNoDisponible(false);
+      try {
+        const lista = await obtenerLocalidades(provincia);
+        if (vigente) setLocalidades(lista);
+      } catch {
+        if (vigente) {
+          setLocalidades([]);
+          setListaNoDisponible(true);
+        }
+      } finally {
+        if (vigente) setCargandoLocalidades(false);
+      }
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [provincia]);
+
+  function limpiarFormulario() {
+    setNombre("");
+    setApellido("");
+    setApodo("");
+    setDni("");
+    setSexo("masculino");
+    setCiudad("");
+    setProvincia("");
+    setFechaNacimiento("");
+    setLadoJuego("drive");
+    setCategoriaDeclarada("");
+    setAutorizaPublicacionPerfil(false);
+    setAutorizaPublicacionApodo(false);
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+
+    // Con la lista oficial, la ciudad tiene que ser una de la lista; si la API
+    // no respondió, se acepta lo escrito pero con formato prolijo.
+    const ciudadFinal =
+      localidades.length > 0
+        ? buscarCoincidencia(ciudad, localidades)
+        : formatearNombreLugar(ciudad);
+    if (!ciudadFinal) {
+      setMensaje("");
+      setError("Elegí tu ciudad de la lista que aparece al escribir.");
+      return;
+    }
 
     try {
       setEnviando(true);
@@ -37,7 +102,7 @@ export default function SolicitudRegistroForm() {
         apodo: apodo || "",
         dni,
         sexo,
-        ciudad,
+        ciudad: ciudadFinal,
         provincia,
         fechaNacimiento: new Date(fechaNacimiento),
         ladoJuego,
@@ -50,7 +115,9 @@ export default function SolicitudRegistroForm() {
         origenDecisionPublicacion: "formulario_publico",
       });
 
+      limpiarFormulario();
       setMensaje("Solicitud enviada correctamente. FOXREN revisará tus datos.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       console.error("ERROR AL CREAR SOLICITUD:", error);
       setError("No se pudo enviar la solicitud. Intentá nuevamente.");
@@ -119,23 +186,50 @@ export default function SolicitudRegistroForm() {
         </div>
 
         <div>
-          <label>Ciudad</label>
-          <input
-            type="text"
-            value={ciudad}
-            onChange={(event) => setCiudad(event.target.value)}
+          <label>Provincia</label>
+          <select
+            value={provincia}
+            onChange={(event) => {
+              setProvincia(event.target.value);
+              setCiudad("");
+            }}
             required
-          />
+          >
+            <option value="">Seleccioná tu provincia</option>
+            {PROVINCIAS.map((nombreProvincia) => (
+              <option key={nombreProvincia} value={nombreProvincia}>
+                {nombreProvincia}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
-          <label>Provincia</label>
+          <label>Ciudad</label>
           <input
             type="text"
-            value={provincia}
-            onChange={(event) => setProvincia(event.target.value)}
+            list="foxren-ciudades"
+            value={ciudad}
+            onChange={(event) => setCiudad(event.target.value)}
+            placeholder={
+              !provincia
+                ? "Primero elegí la provincia"
+                : cargandoLocalidades
+                  ? "Cargando ciudades..."
+                  : "Escribí y elegí de la lista"
+            }
+            disabled={!provincia}
+            autoComplete="off"
             required
           />
+          <datalist id="foxren-ciudades">
+            {localidades.map((nombreCiudad) => (
+              <option key={nombreCiudad} value={nombreCiudad} />
+            ))}
+          </datalist>
+          {listaNoDisponible && (
+            <p>No pudimos cargar la lista de ciudades. Escribí el nombre de tu ciudad.</p>
+          )}
         </div>
 
         <div>
